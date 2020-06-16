@@ -14,8 +14,8 @@ let package = Package(
         dependencies: [
             // Dependencies declare other packages that this package depends on.
             // .package(url: /* package url */, from: "1.0.0"),
-            //.package(url: "https://github.com/Guang1234567/Swift_Boost_Context.git", .branch("master"))
-            .package(path: "/Users/lihanguang/dev_kit/sdk/swift_source/readdle/Swift_Boost_Context"),
+            .package(url: "https://github.com/ReactiveX/RxSwift.git", from: "5.0.0"),
+            .package(url: "https://github.com/Guang1234567/Swift_Boost_Context.git", .branch("master")),
             .package(url: "https://github.com/Guang1234567/Swift_Atomics.git", .branch("master"))
         ],
         targets: [
@@ -23,7 +23,14 @@ let package = Package(
             // Targets can depend on other targets in this package, and on products in packages which this package depends on.
             .target(
                     name: "Swift_Coroutine",
-                    dependencies: ["Swift_Boost_Context", "Swift_Atomics"]),
+                    dependencies: [
+                        "Swift_Boost_Context",
+                        "Swift_Atomics",
+                        "RxSwift",
+                        .product(name: "RxRelay", package: "RxSwift"),
+                        .product(name: "RxCocoa", package: "RxSwift"),
+                        .product(name: "RxBlocking", package: "RxSwift")
+                    ]),
             .target(
                     name: "Example",
                     dependencies: ["Swift_Coroutine"]),

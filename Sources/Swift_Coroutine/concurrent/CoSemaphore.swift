@@ -14,11 +14,16 @@ public class CoSemaphore: CustomStringConvertible, CustomDebugStringConvertible 
     }
 
     public func wait(_ co: Coroutine) throws -> Void {
-        try co.yieldUntil(cond: { [unowned self] in
-            let result = self._count.load() > 0
-            //print("\(self._name) self._count.load() > 0  == \(result)")
-            return result
-        })
+        try co.yieldUntil { [unowned self] () -> Bool in
+            self.count() > 0
+        }
+        self._count.decrement()
+    }
+
+    public func waitUntil(_ co: Coroutine, _ cond: @escaping (Int) throws -> Bool) throws -> Void {
+        try co.yieldUntil { [unowned self] () throws -> Bool in
+            return try cond(self.count())
+        }
         self._count.decrement()
     }
 
@@ -26,11 +31,15 @@ public class CoSemaphore: CustomStringConvertible, CustomDebugStringConvertible 
         self._count.increment()
     }
 
+    public func count() -> Int {
+        return self._count.load()
+    }
+
     public var description: String {
-        return "CoSemaphore(_count: \(_count.load()))"
+        return "CoSemaphore(_count: \(count()))"
     }
 
     public var debugDescription: String {
-        return "CoSemaphore(_count: \(_count.load()))"
+        return "CoSemaphore(_count: \(count()))"
     }
 }
