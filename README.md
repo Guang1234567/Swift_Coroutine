@@ -233,7 +233,7 @@ channel = CoChannel(_name: Optional("ObjectIdentifier(0x00007f8b748b03c0)"), _is
 ### Future (Non-Blocking)
 
  A workflow step might need data from two or more previous steps combined.
-In the example above, bookFlight method might actually needs both Speaker and City objects:
+In the example below, bookFlight method might actually needs both Speaker and City objects:
  
  ![https://arrow-kt.io/docs/0.9/patterns/monads/](./non-linear-workflow.png)
  
@@ -330,7 +330,7 @@ suspend func loadSpeaker() : Result<Speaker> {
 }
 
 suspend func nextTalk() : Result<Talk> {
-    withContext(Dispatchers.Dispatchers.Default) {
+    withContext(Dispatchers.Default) {
             // running on  "New"  thread
     }
 }
