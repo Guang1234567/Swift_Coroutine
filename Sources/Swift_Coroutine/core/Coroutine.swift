@@ -57,12 +57,15 @@ public protocol Coroutine {
 
     func delay(_ timeInterval: DispatchTimeInterval) throws -> Void
 
+    func continueOn(_ dispatchQueue: DispatchQueue) throws -> Void
+
 }
 
 enum CoroutineTransfer<T> {
     case YIELD
     case YIELD_UNTIL(Completable)
     case DELAY(DispatchTimeInterval)
+    case CONTINUE_ON(DispatchQueue)
     case EXIT(Result<T, Error>)
 }
 
@@ -74,7 +77,7 @@ class CoroutineImpl<T>: Coroutine, CustomDebugStringConvertible, CustomStringCon
 
     var _yieldCtx: BoostContext?
 
-    let _dispatchQueue: DispatchQueue
+    var _dispatchQueue: DispatchQueue
 
     let _task: CoroutineScopeFn<T>
 
@@ -180,6 +183,11 @@ class CoroutineImpl<T>: Coroutine, CustomDebugStringConvertible, CustomStringCon
                 triggerStateChangedEvent(.YIELDED)
                 self._dispatchQueue.asyncAfter(deadline: .now() + timeInterval, execute: self.makeResumer(bctx))
                 //print("\(self)  --  DELAY -- finish")
+            case .CONTINUE_ON(let dq):
+                triggerStateChangedEvent(.YIELDED)
+                //print(" CONTINUE_ON - dispatchQueue - \(dq.label)")
+                self._dispatchQueue = dq
+                dq.async(execute: self.makeResumer(bctx))
             case .EXIT(let result):
                 //print("\(self)  --  EXITED  --  \(result)")
                 self._currentState.store(CoroutineState.EXITED.rawValue)
@@ -216,6 +224,13 @@ class CoroutineImpl<T>: Coroutine, CustomDebugStringConvertible, CustomStringCon
         try self._yield(CoroutineTransfer.DELAY(timeInterval))
     }
 
+    func continueOn(_ dispatchQueue: DispatchQueue) throws {
+        guard dispatchQueue != self._dispatchQueue else {
+            return
+        }
+        try self._yield(CoroutineTransfer.CONTINUE_ON(dispatchQueue))
+    }
+
     func _yield(_ ctf: CoroutineTransfer<T>) throws -> Void {
         // not in current coroutine scope
         // equals `func isInsideCoroutine() -> Bool`
@@ -246,6 +261,7 @@ class CoroutineImpl<T>: Coroutine, CustomDebugStringConvertible, CustomStringCon
     var description: String {
         return "CoroutineImpl(_name: \(_name))"
     }
+
 }
 
 

@@ -41,11 +41,11 @@ public class CoFuture<R>: CustomDebugStringConvertible, CustomStringConvertible 
             self._lock.signal()
         }
 
-        self.launchCoIfNotLaunched()
+        self.launchCo()
         return self
     }
 
-    func launchCoIfNotLaunched() -> Void {
+    func launchCo() -> Void {
         if self._coJob == nil
            && self._result == nil {
             self._coJob = CoLauncher.launch(name: "co_\(self._name)", dispatchQueue: self._dispatchQueue) { [unowned self](co: Coroutine) throws -> R in

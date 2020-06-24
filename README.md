@@ -102,12 +102,12 @@ func example_01() throws {
 
 ```ruby
 Example-01 =============================
-co 01 - start <NSThread: 0x7fee0ff04640>{number = 2, name = (null)}
-co 02 - start <NSThread: 0x7fee0ff04640>{number = 2, name = (null)}
-co 01 - end <NSThread: 0x7fee0ff04640>{number = 2, name = (null)}
-co 02 - end <NSThread: 0x7fee0fe040f0>{number = 3, name = (null)}
-co 03 - start <NSThread: 0x7fee0fe040f0>{number = 3, name = (null)}
-co 03 - end <NSThread: 0x7fee0fe040f0>{number = 3, name = (null)}
+co 01 - start <NSThread: 0x7f9e3c004600>{number = 3, name = (null)}
+co 02 - start <NSThread: 0x7f9e3a4060f0>{number = 2, name = (null)}
+co 03 - start <NSThread: 0x7f9e3c104120>{number = 4, name = (null)}
+co 01 - end <NSThread: 0x7f9e3a4060f0>{number = 2, name = (null)}
+co 03 - end <NSThread: 0x7f9e3c004600>{number = 3, name = (null)}
+co 02 - end <NSThread: 0x7f9e3c104120>{number = 4, name = (null)}
 Example-01 =============  end  ===============
 ```
 
@@ -142,6 +142,65 @@ func example_03() throws {
 Example-03 =============================
 coDelay - start <NSThread: 0x7fe15fd0db40>{number = 2, name = (null)}
 coDelay - end <NSThread: 0x7fe15fc040a0>{number = 3, name = (null)}  in 2191.501021385193 ms
+```
+
+### continueOn (Non-Blocking)
+
+Are you envious of `observeOn` in `Rxswift` and `Rxjava` 
+
+or [withContext ](https://kotlin.github.io/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines/with-context.html) in `kotlin-coroutines`?
+
+`Swift-Couroutine` also has `continueOn` to instead of them.
+
+It's inspiration from [Arrow Fx](https://arrow-kt.io/docs/0.10/fx/async/#dispatchers-and-contexts) a kotlin FP framework.
+
+```swift
+func example_06() throws {
+    // Example-06
+    // ===================
+    print("Example-06 =============================")
+
+    let queue = DispatchQueue.global()
+    let queue_001 = DispatchQueue(label: "queue_001", attributes: .concurrent)
+    let queue_002 = DispatchQueue(label: "queue_002", attributes: .concurrent)
+
+    queue.async {
+        Thread.sleep(forTimeInterval: 0.005)
+        print("other job \(Thread.current)")
+    }
+
+    let coJob1 = CoLauncher.launch(name: "co1", dispatchQueue: queue) { (co: Coroutine) throws -> String in
+        defer {
+            print("co 01 - end \(Thread.current)")
+        }
+        print("co 01 - start \(Thread.current)")
+        try co.continueOn(queue_001)
+        print("co 01 - continueOn - queue_001 -  \(Thread.current)")
+        try co.continueOn(DispatchQueue.main)
+        print("co 01 - continueOn - queue_main -  \(Thread.current)")
+        try co.continueOn(queue_002)
+        print("co 01 - continueOn - queue_002 -  \(Thread.current)")
+        try co.continueOn(queue)
+
+        return "co1 's result"
+    }
+
+    try coJob1.join()
+
+    Thread.sleep(forTimeInterval: 1)
+}
+```
+
+**output**
+
+```ruby
+Example-06 =============================
+co 01 - start <NSThread: 0x7ff43d704600>{number = 2, name = (null)}
+co 01 - continueOn - queue_001 -  <NSThread: 0x7ff43d410500>{number = 3, name = (null)}
+co 01 - continueOn - queue_main -  <NSThread: 0x7ff43d410050>{number = 1, name = main}
+co 01 - continueOn - queue_002 -  <NSThread: 0x7ff43d705c30>{number = 4, name = (null)}
+co 01 - end <NSThread: 0x7ff43d705f30>{number = 5, name = (null)}
+other job <NSThread: 0x7ff43f1040c0>{number = 6, name = (null)}
 ```
 
 

@@ -124,7 +124,9 @@ func example_04() throws {
         var sum: Int = 0
         for i in (1...100) {
             //print("--------------------   makeCoFuture_01_\(i) --- await(\(co)) -- before")
+            try co.continueOn(.global())
             sum += try makeCoFuture_01("makeCoFuture_01_\(i)", queue, i).await(co)
+            try co.continueOn(.main)
             //print("--------------------   makeCoFuture_01_\(i) --- await(\(co)) -- end")
         }
         print("sum = \(sum)")
@@ -141,7 +143,9 @@ func makeCoFuture_01(_ name: String, _ dispatchQueue: DispatchQueue, _ i: Int) -
         var sum: Int = 0
         for j in (1...100) {
             //print("--------------------   makeCoFuture_02_\(j) --- await(\(co)) -- before")
+            try co.continueOn(.main)
             sum += try makeCoFuture_02("makeCoFuture_02_\(j)", dispatchQueue, j).await(co)
+            try co.continueOn(.global())
             //print("--------------------   makeCoFuture_02_\(j) --- await(\(co)) -- end")
         }
         return sum
@@ -209,13 +213,50 @@ func example_05() throws {
     print("channel = \(channel)")
 }
 
+func example_06() throws {
+    // Example-06
+    // ===================
+    print("Example-06 =============================")
+
+    let queue = DispatchQueue.global()
+    let queue_001 = DispatchQueue(label: "queue_001", attributes: .concurrent)
+    let queue_002 = DispatchQueue(label: "queue_002", attributes: .concurrent)
+
+    queue.async {
+        Thread.sleep(forTimeInterval: 0.005)
+        print("other job \(Thread.current)")
+    }
+
+    let coJob1 = CoLauncher.launch(name: "co1", dispatchQueue: queue) { (co: Coroutine) throws -> String in
+        defer {
+            print("co 01 - end \(Thread.current)")
+        }
+        print("co 01 - start \(Thread.current)")
+        try co.continueOn(queue_001)
+        print("co 01 - continueOn - queue_001 -  \(Thread.current)")
+        try co.continueOn(DispatchQueue.main)
+        print("co 01 - continueOn - queue_main -  \(Thread.current)")
+        try co.continueOn(queue_002)
+        print("co 01 - continueOn - queue_002 -  \(Thread.current)")
+        try co.continueOn(queue)
+
+        return "co1 's result"
+    }
+
+    try coJob1.join()
+
+    Thread.sleep(forTimeInterval: 1)
+}
+
 func main() throws -> Void {
 
-    try example_01()
+    /*try example_01()
     try example_02()
     try example_03()
     try example_04()
-    try example_05()
+    try example_05()*/
+    try example_06()
+
 }
 
 do {
