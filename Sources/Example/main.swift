@@ -134,7 +134,6 @@ func example_04() throws {
     //print("Thread.sleep(forTimeInterval: 5)")
     let end = CFAbsoluteTimeGetCurrent()
     //Thread.sleep(forTimeInterval: 1)
-    print("g_DefaultContextAllocator = \(g_DefaultContextAllocator)")
 }
 
 func makeCoFuture_01(_ name: String, _ dispatchQueue: DispatchQueue, _ i: Int) -> CoFuture<Int> {
