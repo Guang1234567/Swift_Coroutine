@@ -70,15 +70,19 @@ class CoroutineImpl<T>: Coroutine, CustomDebugStringConvertible, CustomStringCon
 
     let _name: String
 
-    let _onStateChanged: AsyncSubject<CoroutineState>
+    var _originCtx: BoostContext!
 
-    var _fromCtx: BoostContext?
+    var _yieldCtx: BoostContext?
 
     let _dispatchQueue: DispatchQueue
 
     let _task: CoroutineScopeFn<T>
 
     var _currentState: AtomicInt
+
+    let _disposeBag: DisposeBag = DisposeBag()
+
+    let _onStateChanged: AsyncSubject<CoroutineState>
 
     var currentState: CoroutineState {
         CoroutineState(rawValue: _currentState.load()) ?? .EXITED
@@ -88,13 +92,9 @@ class CoroutineImpl<T>: Coroutine, CustomDebugStringConvertible, CustomStringCon
         return _onStateChanged.asObserver()
     }
 
-    let _disposeBag: DisposeBag = DisposeBag()
-
-    var originCtx: BoostContext!
-
     deinit {
-        self._fromCtx = nil
-        self.originCtx = nil
+        self._originCtx = nil
+        self._yieldCtx = nil
         //print("CoroutineImpl deinit : _name = \(self._name)")
     }
 
@@ -105,12 +105,29 @@ class CoroutineImpl<T>: Coroutine, CustomDebugStringConvertible, CustomStringCon
     ) {
         self._name = name
         self._onStateChanged = AsyncSubject()
-        self._fromCtx = nil
+        self._yieldCtx = nil
         self._dispatchQueue = dispatchQueue
         self._task = task
         self._currentState = AtomicInt()
         self._currentState.initialize(CoroutineState.INITED.rawValue)
-        self.originCtx = makeBoostContext(self.coScopeFn)
+
+        // issue: memory leak!
+        //self.originCtx = makeBoostContext(self.coScopeFn)
+
+        self._originCtx = makeBoostContext { [unowned self] (fromCtx: BoostContext, data: Void) -> Void in
+            //print("\(self)  coScopeFn  :  \(fromCtx)  ---->  \(_bctx!)")
+            self._currentState.CAS(current: CoroutineState.INITED.rawValue, future: CoroutineState.STARTED.rawValue)
+            self.triggerStateChangedEvent(.STARTED)
+
+            self._yieldCtx = fromCtx
+            let result: Result<T, Error> = Result { [unowned self] in
+                try self._task(self)
+            }
+
+            //print("\(self)  coScopeFn  :  \(self._fromCtx ?? fromCtx)  <----  ")
+            let _: BoostTransfer<Void> = (self._yieldCtx ?? fromCtx).jump(data: CoroutineTransfer.EXIT(result))
+            //print("Never jump back to here !!!")
+        }
     }
 
     func triggerStateChangedEvent(_ state: CoroutineState) {
@@ -120,24 +137,25 @@ class CoroutineImpl<T>: Coroutine, CustomDebugStringConvertible, CustomStringCon
         }
     }
 
-    func coScopeFn(fromCtx: BoostContext, data: Void) -> Void {
+    /*
+    func coScopeFn(_ fromCtx: BoostContext, _ data: Void) -> Void {
         //print("\(self)  coScopeFn  :  \(fromCtx)  ---->  \(_bctx!)")
         self._currentState.CAS(current: CoroutineState.INITED.rawValue, future: CoroutineState.STARTED.rawValue)
-        triggerStateChangedEvent(.STARTED)
+        self.triggerStateChangedEvent(.STARTED)
 
-        self._fromCtx = fromCtx
-        let result: Result<T, Error> = Result {
+        self._yieldCtx = fromCtx
+        let result: Result<T, Error> = Result { [unowned self] in
             try self._task(self)
         }
 
         //print("\(self)  coScopeFn  :  \(self._fromCtx ?? fromCtx)  <----  ")
-        let _: BoostTransfer<Void> = (self._fromCtx ?? fromCtx).jump(data: CoroutineTransfer.EXIT(result))
+        let _: BoostTransfer<Void> = (self._yieldCtx ?? fromCtx).jump(data: CoroutineTransfer.EXIT(result))
         //print("Never jump back to here !!!")
     }
+    */
 
     func start() -> Void {
-        //print("let bctx: BoostContext = makeBoostContext(self.coScopeFn)")
-        let bctx: BoostContext = self.originCtx
+        let bctx: BoostContext = self._originCtx
         self._dispatchQueue.async(execute: self.makeResumer(bctx))
     }
 
@@ -164,8 +182,6 @@ class CoroutineImpl<T>: Coroutine, CustomDebugStringConvertible, CustomStringCon
                 //print("\(self)  --  DELAY -- finish")
             case .EXIT(let result):
                 //print("\(self)  --  EXITED  --  \(result)")
-                let pointer = Unmanaged.passUnretained(self).toOpaque()
-                let _ = Unmanaged<CoroutineImpl<T>>.fromOpaque(pointer).takeRetainedValue()
                 self._currentState.store(CoroutineState.EXITED.rawValue)
                 triggerStateChangedEvent(.EXITED)
 
@@ -204,7 +220,7 @@ class CoroutineImpl<T>: Coroutine, CustomDebugStringConvertible, CustomStringCon
         // not in current coroutine scope
         // equals `func isInsideCoroutine() -> Bool`
         // ---------------
-        guard let fromCtx = self._fromCtx else {
+        guard let yieldCtx = self._yieldCtx else {
             throw CoroutineError.calledOutsideCoroutine(reason: "Call `yield()` outside Coroutine")
         }
 
@@ -212,16 +228,16 @@ class CoroutineImpl<T>: Coroutine, CustomDebugStringConvertible, CustomStringCon
         // ---------------
         _currentState.store(CoroutineState.YIELDED.rawValue)
         //print("\(self)  _yield  :  \(fromCtx)  <----  \(Thread.current)")
-        let btf: BoostTransfer<Void> = fromCtx.jump(data: ctf)
+        let btf: BoostTransfer<Void> = yieldCtx.jump(data: ctf)
         // update `self._fromCtx` when restart
-        self._fromCtx = btf.fromContext
+        self._yieldCtx = btf.fromContext
         _currentState.store(CoroutineState.RESTARTED.rawValue)
         triggerStateChangedEvent(.RESTARTED)
         //print("\(self)  _yield  :  \(btf.fromContext)  ---->  \(Thread.current)")
     }
 
     func isInsideCoroutine() -> Bool {
-        return self._fromCtx != nil
+        return self._yieldCtx != nil
     }
 
     var debugDescription: String {
