@@ -213,51 +213,67 @@ func example_05() throws {
     // ===================
     print("Example-05 =============================")
 
-    let producerQueue = DispatchQueue(label: "producerQueue", attributes: .concurrent)
-    let consumerQueue = DispatchQueue(label: "consumerQueue", attributes: .concurrent)
-    let closeQueue = DispatchQueue(label: "closeQueue", attributes: .concurrent)
-    let channel = CoChannel<Int>(capacity: 7)
+    let consumerQueue = DispatchQueue(label: "consumerQueue", qos: .userInteractive, attributes: .concurrent)
+    let producerQueue_01 = DispatchQueue(label: "producerQueue_01", /*qos: .background,*/ attributes: .concurrent)
+    let producerQueue_02 = DispatchQueue(label: "producerQueue_02", /*qos: .background,*/ attributes: .concurrent)
+    let producerQueue_03 = DispatchQueue(label: "producerQueue_03", /*qos: .background,*/ attributes: .concurrent)
+    let closeQueue = DispatchQueue(label: "closeQueue", /*qos: .background,*/ attributes: .concurrent)
+    let channel = CoChannel<Int>(name: "CoChannel_Example-05", capacity: 1)
 
     let coClose = CoLauncher.launch(name: "coClose", dispatchQueue: closeQueue) { (co: Coroutine) throws -> Void in
+        try co.delay(.milliseconds(100))
         print("coClose before  --  delay")
-        try co.delay(.milliseconds(10))
         //try co.yield()
-        print("coClose after  --  delay")
         channel.close()
-        print("coClose  --  end")
+        print("coClose after  --  delay")
     }
 
     let coConsumer = CoLauncher.launch(name: "coConsumer", dispatchQueue: consumerQueue) { (co: Coroutine) throws -> Void in
         var time: Int = 1
         for item in try channel.receive(co) {
+            try co.delay(.milliseconds(15))
+            //try co.delay(.milliseconds(5))
             print("consumed : \(item)  --  \(time)  --  \(Thread.current)")
             time += 1
         }
+        print("coConsumer  --  end")
     }
 
-    let coProducer01 = CoLauncher.launch(name: "coProducer01", dispatchQueue: producerQueue) { (co: Coroutine) throws -> Void in
-        for time in (1...32).reversed() {
+    let coProducer01 = CoLauncher.launch(name: "coProducer01", dispatchQueue: producerQueue_01) { (co: Coroutine) throws -> Void in
+        for time in (1...20).reversed() {
+            try co.delay(.milliseconds(10))
             //print("coProducer01  --  before produce : \(time)")
             try channel.send(co, time)
             print("coProducer01  --  after produce : \(time)")
-            try co.delay(.milliseconds(1))
         }
         print("coProducer01  --  end")
     }
 
-    /*let coProducer02 = CoLauncher.launch(name: "coProducer02", dispatchQueue: producerQueue) { (co: Coroutine) throws -> Void in
-        for time in (33...50).reversed() {
+    let coProducer02 = CoLauncher.launch(name: "coProducer02", dispatchQueue: producerQueue_02) { (co: Coroutine) throws -> Void in
+        for time in (21...40).reversed() {
             //print("coProducer02  --  before produce : \(time)")
+            try co.delay(.milliseconds(10))
             try channel.send(co, time)
             print("coProducer02  --  after produce : \(time)")
         }
         print("coProducer02  --  end")
-    }*/
+    }
+
+    let coProducer03 = CoLauncher.launch(name: "coProducer03", dispatchQueue: producerQueue_03) { (co: Coroutine) throws -> Void in
+        for time in (41...60).reversed() {
+            //print("coProducer02  --  before produce : \(time)")
+            try co.delay(.milliseconds(10))
+            try channel.send(co, time)
+            print("coProducer03  --  after produce : \(time)")
+        }
+        print("coProducer03  --  end")
+    }
 
     try coClose.join()
     try coConsumer.join()
     try coProducer01.join()
-    //try coProducer02.join()
+    try coProducer02.join()
+    try coProducer03.join()
 
     print("channel = \(channel)")
 }
@@ -267,26 +283,37 @@ func example_05() throws {
 
 ```ruby
 Example-05 =============================
+coProducer03  --  after produce : 60
+coProducer02  --  after produce : 40
+consumed : 60  --  1  --  <NSThread: 0x7fd08b204120>{number = 6, name = (null)}
+coProducer01  --  after produce : 20
+consumed : 40  --  2  --  <NSThread: 0x7fd089e04600>{number = 3, name = (null)}
+coProducer03  --  after produce : 59
+consumed : 20  --  3  --  <NSThread: 0x7fd089e04600>{number = 3, name = (null)}
+coProducer02  --  after produce : 39
+consumed : 59  --  4  --  <NSThread: 0x7fd089f05460>{number = 7, name = (null)}
+coProducer01  --  after produce : 19
+consumed : 39  --  5  --  <NSThread: 0x7fd089f05460>{number = 7, name = (null)}
+coProducer03  --  after produce : 58
 coClose before  --  delay
-coProducer01  --  after produce : 32
-consumed : 32  --  1  --  <NSThread: 0x7f8b72f04160>{number = 3, name = (null)}
-coProducer01  --  after produce : 31
-consumed : 31  --  2  --  <NSThread: 0x7f8b72e04600>{number = 2, name = (null)}
-coProducer01  --  after produce : 30
-consumed : 30  --  3  --  <NSThread: 0x7f8b72e04600>{number = 2, name = (null)}
-coProducer01  --  after produce : 29
-consumed : 29  --  4  --  <NSThread: 0x7f8b72e04600>{number = 2, name = (null)}
-coProducer01  --  after produce : 28
-consumed : 28  --  5  --  <NSThread: 0x7f8b748040f0>{number = 4, name = (null)}
-coProducer01  --  after produce : 27
-consumed : 27  --  6  --  <NSThread: 0x7f8b748040f0>{number = 4, name = (null)}
-coProducer01  --  after produce : 26
-consumed : 26  --  7  --  <NSThread: 0x7f8b72e04600>{number = 2, name = (null)}
-coProducer01  --  after produce : 25
-consumed : 25  --  8  --  <NSThread: 0x7f8b72f04160>{number = 3, name = (null)}
 coClose after  --  delay
-coClose  --  end
-channel = CoChannel(_name: Optional("ObjectIdentifier(0x00007f8b748b03c0)"), _isClosed: true, _semFull: CoSemaphore(_count: 7), _semEmpty: CoSemaphore(_count: 0))
+consumed : 19  --  6  --  <NSThread: 0x7fd089f05460>{number = 7, name = (null)}
+coProducer02  --  after produce : 38
+consumed : 58  --  7  --  <NSThread: 0x7fd089e04600>{number = 3, name = (null)}
+coProducer01  --  after produce : 18
+consumed : 38  --  8  --  <NSThread: 0x7fd08b0042d0>{number = 5, name = (null)}
+consumed : 18  --  9  --  <NSThread: 0x7fd08b204120>{number = 6, name = (null)}
+coConsumer  --  end
+channel = CoChannel(
+     _name: Optional("CoChannel_Example-05"),
+     _isClosed: true,
+     _semFull: CoSemaphore(initValue: 1, count: 1, waiting: 0),
+     _semEmpty: CoSemaphore(initValue: 0, count: 0, waiting: 0),
+     _semMutex: CoSemaphore(initValue: 1, count: 1, waiting: 0),
+     _buffer: []
+)
+
+Process finished with exit code 0
 ```
 
 ### Future (Non-Blocking)

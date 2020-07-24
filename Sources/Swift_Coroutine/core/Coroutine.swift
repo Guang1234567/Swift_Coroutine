@@ -197,7 +197,7 @@ class CoroutineImpl<T>: Coroutine, CustomDebugStringConvertible, CustomStringCon
     }
 
     func makeResumer(_ bctx: BoostContext) -> CoroutineResumer {
-        return { [unowned self] in
+        return { /*[unowned self] in*/
             let btf: BoostTransfer<CoroutineTransfer<T>> = bctx.jump(data: ())
             let coTransfer: CoroutineTransfer<T> = btf.data
             return self.resume(btf.fromContext, ctf: coTransfer)

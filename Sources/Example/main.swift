@@ -58,13 +58,14 @@ func example_02() throws {
     let consumerQueue = DispatchQueue(label: "consumerQueue", attributes: .concurrent)
     let semFull = CoSemaphore(value: 8, "full")
     let semEmpty = CoSemaphore(value: 0, "empty")
-    let semMutex = DispatchSemaphore(value: 1)
+    let semMutex = CoSemaphore(value: 1, "mutex")
+    //let semMutex = DispatchSemaphore(value: 1)
     var buffer: [Int] = []
 
     let coConsumer = CoLauncher.launch(dispatchQueue: consumerQueue) { (co: Coroutine) throws -> Void in
         for time in (1...32) {
             try semEmpty.wait(co)
-            semMutex.wait()
+            try semMutex.wait(co)
             if buffer.isEmpty {
                 fatalError()
             }
@@ -78,7 +79,7 @@ func example_02() throws {
     let coProducer = CoLauncher.launch(dispatchQueue: producerQueue) { (co: Coroutine) throws -> Void in
         for time in (1...32).reversed() {
             try semFull.wait(co)
-            semMutex.wait()
+            try semMutex.wait(co)
             buffer.append(time)
             print("produced : \(time)   \(Thread.current)")
             semMutex.signal()
@@ -90,8 +91,9 @@ func example_02() throws {
     try coProducer.join()
 
     print("finally, buffer = \(buffer)")
-    print("semFull = \(semFull)")
+    print("semFull  = \(semFull)")
     print("semEmpty = \(semEmpty)")
+    print("semMutex = \(semMutex)")
 }
 
 func example_03() throws {
@@ -135,6 +137,7 @@ func example_04() throws {
 
     //print("Thread.sleep(forTimeInterval: 5)")
     let end = CFAbsoluteTimeGetCurrent()
+    print("coFuture - end \(Thread.current)  in \((end - start) * 1000) ms")
     //Thread.sleep(forTimeInterval: 1)
 }
 
@@ -164,51 +167,67 @@ func example_05() throws {
     // ===================
     print("Example-05 =============================")
 
-    let producerQueue = DispatchQueue(label: "producerQueue", attributes: .concurrent)
-    let consumerQueue = DispatchQueue(label: "consumerQueue", attributes: .concurrent)
-    let closeQueue = DispatchQueue(label: "closeQueue", attributes: .concurrent)
-    let channel = CoChannel<Int>(capacity: 7)
+    let consumerQueue = DispatchQueue(label: "consumerQueue", qos: .userInteractive, attributes: .concurrent)
+    let producerQueue_01 = DispatchQueue(label: "producerQueue_01", /*qos: .background,*/ attributes: .concurrent)
+    let producerQueue_02 = DispatchQueue(label: "producerQueue_02", /*qos: .background,*/ attributes: .concurrent)
+    let producerQueue_03 = DispatchQueue(label: "producerQueue_03", /*qos: .background,*/ attributes: .concurrent)
+    let closeQueue = DispatchQueue(label: "closeQueue", /*qos: .background,*/ attributes: .concurrent)
+    let channel = CoChannel<Int>(name: "CoChannel_Example-05", capacity: 1)
 
     let coClose = CoLauncher.launch(name: "coClose", dispatchQueue: closeQueue) { (co: Coroutine) throws -> Void in
+        try co.delay(.milliseconds(100))
         print("coClose before  --  delay")
-        try co.delay(.milliseconds(10))
         //try co.yield()
-        print("coClose after  --  delay")
         channel.close()
-        print("coClose  --  end")
+        print("coClose after  --  delay")
     }
 
     let coConsumer = CoLauncher.launch(name: "coConsumer", dispatchQueue: consumerQueue) { (co: Coroutine) throws -> Void in
         var time: Int = 1
         for item in try channel.receive(co) {
+            try co.delay(.milliseconds(15))
+            //try co.delay(.milliseconds(5))
             print("consumed : \(item)  --  \(time)  --  \(Thread.current)")
             time += 1
         }
+        print("coConsumer  --  end")
     }
 
-    let coProducer01 = CoLauncher.launch(name: "coProducer01", dispatchQueue: producerQueue) { (co: Coroutine) throws -> Void in
-        for time in (1...32).reversed() {
+    let coProducer01 = CoLauncher.launch(name: "coProducer01", dispatchQueue: producerQueue_01) { (co: Coroutine) throws -> Void in
+        for time in (1...20).reversed() {
+            try co.delay(.milliseconds(10))
             //print("coProducer01  --  before produce : \(time)")
             try channel.send(co, time)
             print("coProducer01  --  after produce : \(time)")
-            try co.delay(.milliseconds(1))
         }
         print("coProducer01  --  end")
     }
 
-    /*let coProducer02 = CoLauncher.launch(name: "coProducer02", dispatchQueue: producerQueue) { (co: Coroutine) throws -> Void in
-        for time in (33...50).reversed() {
+    let coProducer02 = CoLauncher.launch(name: "coProducer02", dispatchQueue: producerQueue_02) { (co: Coroutine) throws -> Void in
+        for time in (21...40).reversed() {
             //print("coProducer02  --  before produce : \(time)")
+            try co.delay(.milliseconds(10))
             try channel.send(co, time)
             print("coProducer02  --  after produce : \(time)")
         }
         print("coProducer02  --  end")
-    }*/
+    }
+
+    let coProducer03 = CoLauncher.launch(name: "coProducer03", dispatchQueue: producerQueue_03) { (co: Coroutine) throws -> Void in
+        for time in (41...60).reversed() {
+            //print("coProducer02  --  before produce : \(time)")
+            try co.delay(.milliseconds(10))
+            try channel.send(co, time)
+            print("coProducer03  --  after produce : \(time)")
+        }
+        print("coProducer03  --  end")
+    }
 
     try coClose.join()
     try coConsumer.join()
     try coProducer01.join()
-    //try coProducer02.join()
+    try coProducer02.join()
+    try coProducer03.join()
 
     print("channel = \(channel)")
 }
@@ -250,12 +269,12 @@ func example_06() throws {
 
 func main() throws -> Void {
 
-    /*try example_01()
-    try example_02()
-    try example_03()
-    try example_04()
-    try example_05()*/
-    try example_06()
+    //try example_01()
+    //try example_02()
+    //try example_03()
+    //try example_04()
+    try example_05()
+    //try example_06()
 
 }
 

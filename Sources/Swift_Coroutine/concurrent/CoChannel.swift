@@ -7,11 +7,13 @@ public enum CoChannelError: Error {
 
 public class CoChannel<E>: CustomDebugStringConvertible, CustomStringConvertible {
 
+    let _capacity: Int
+
     let _semFull: CoSemaphore
 
     let _semEmpty: CoSemaphore
 
-    let _lock: DispatchSemaphore
+    let _semMutex: CoSemaphore
 
     var _buffer: [E]
 
@@ -20,49 +22,63 @@ public class CoChannel<E>: CustomDebugStringConvertible, CustomStringConvertible
     var _name: String!
 
     public init(name: String? = nil, capacity: Int = 7) {
-        self._semFull = CoSemaphore(value: capacity, "CoChannel_Full")
-        self._semEmpty = CoSemaphore(value: 0, "CoChannel_Empty")
-        self._lock = DispatchSemaphore(value: 1)
-        self._buffer = []
-        self._isClosed = AtomicBool()
-        self._isClosed.initialize(false)
-        self._name = name ?? "\(ObjectIdentifier(self))"
+        _capacity = capacity
+        _semFull = CoSemaphore(value: capacity, "CoChannel_Full")
+        _semEmpty = CoSemaphore(value: 0, "CoChannel_Empty")
+        _semMutex = CoSemaphore(value: 1, "CoChannel_Mutex")
+        _buffer = []
+        _isClosed = AtomicBool()
+        _isClosed.initialize(false)
+        _name = name ?? "\(ObjectIdentifier(self))"
     }
 
     public func send(_ co: Coroutine, _ e: E) throws -> Void {
-        try self._semFull.waitUntil(co) { [unowned self]  count in
-            if self.isClosed() {
-                throw CoChannelError.closed
-            }
-            return count > 0
-        }
-        defer {
-            self._semEmpty.signal()
-        }
+        //try _semMutex.wait(co)
+        if self.isClosed() {
+            //print("\(co) send  close")
+            /*defer {
+                _semMutex.signal()
+            }*/
+            throw CoChannelError.closed
+        }/* else {
+            _semMutex.signal()
+        }*/
 
-        self._lock.wait()
         defer {
-            self._lock.signal()
+            _semEmpty.signal()
         }
-        self._buffer.append(e)
+        try _semFull.wait(co)
+
+        try _semMutex.wait(co)
+        defer {
+            _semMutex.signal()
+        }
+        _buffer.append(e)
     }
 
     func _receive(_ co: Coroutine) throws -> E {
-        try self._semEmpty.waitUntil(co) { [unowned self] count in
-            if self.isClosed() && count <= 0 {
-                throw CoChannelError.closed
+        try _semMutex.wait(co)
+        if self.isClosed()
+           && _buffer.isEmpty {
+            //print("\(co) receive  close")
+            defer {
+                _semMutex.signal()
             }
-            return count > 0
-        }
-        defer {
-            self._semFull.signal()
+            throw CoChannelError.closed
+        } else {
+            _semMutex.signal()
         }
 
-        self._lock.wait()
         defer {
-            self._lock.signal()
+            _semFull.signal()
         }
-        return self._buffer.removeFirst()
+        try _semEmpty.wait(co)
+
+        try _semMutex.wait(co)
+        defer {
+            _semMutex.signal()
+        }
+        return _buffer.removeFirst()
     }
 
     public func receive(_ co: Coroutine) throws -> AnyIterator<E> {
@@ -77,15 +93,24 @@ public class CoChannel<E>: CustomDebugStringConvertible, CustomStringConvertible
     }
 
     public func isClosed() -> Bool {
-        self._isClosed.load()
+        _isClosed.load()
     }
 
     public var debugDescription: String {
-        return "CoChannel(_name: \(String(describing: _name)), _isClosed: \(isClosed()), _semFull: \(_semFull), _semEmpty: \(_semEmpty))"
+        return description
     }
 
     public var description: String {
-        return "CoChannel(_name: \(String(describing: _name)), _isClosed: \(isClosed()), _semFull: \(_semFull), _semEmpty: \(_semEmpty))"
+        return """
+               CoChannel(
+                    _name: \(String(describing: _name)),
+                    _isClosed: \(isClosed()),
+                    _semFull: \(_semFull),
+                    _semEmpty: \(_semEmpty),
+                    _semMutex: \(_semMutex),
+                    _buffer: \(_buffer)
+               )
+               """
     }
 
 }

@@ -3,43 +3,75 @@ import SwiftAtomics
 
 public class CoSemaphore: CustomStringConvertible, CustomDebugStringConvertible {
 
+    let _value: Int
+
     var _count: AtomicInt
 
     let _name: String
 
+    let _lock: DispatchSemaphore
+
+    var _resumers: [CoroutineResumer]
+
+    deinit {
+    }
+
     public init(value: Int, _ name: String = "") {
-        self._count = AtomicInt()
-        self._count.initialize(value)
-        self._name = name
+        _value = value
+        _count = AtomicInt()
+        _count.initialize(value)
+        _name = name
+        _lock = DispatchSemaphore(value: 1)
+        _resumers = []
     }
 
     public func wait(_ co: Coroutine) throws -> Void {
-        try co.yieldUntil { [unowned self] () -> Bool in
-            self.count() > 0
+        try self.waitUntil(co) {
+            return $0 > 0
         }
-        self._count.decrement()
     }
 
     public func waitUntil(_ co: Coroutine, _ cond: @escaping (Int) throws -> Bool) throws -> Void {
-        try co.yieldUntil { [unowned self] () throws -> Bool in
-            return try cond(self.count())
+        _lock.wait()
+        if try cond(self._count.load()) {
+            defer {
+                _lock.signal()
+            }
+            _count.decrement()
+        } else {
+            try co.yieldUntil { [unowned self] (resumer: @escaping CoroutineResumer) -> Void in
+                defer {
+                    _lock.signal()
+                }
+                _resumers.append(resumer)
+                _count.decrement()
+            }
         }
-        self._count.decrement()
     }
 
     public func signal() -> Void {
-        self._count.increment()
+        _lock.wait()
+        defer {
+            _lock.signal()
+        }
+
+        _count.increment()
+        if !_resumers.isEmpty {
+            let resumer = _resumers.removeFirst()
+            resumer()
+        }
     }
 
     public func count() -> Int {
-        return self._count.load()
-    }
-
-    public var description: String {
-        return "CoSemaphore(_count: \(count()))"
+        let count = _count.load()
+        return count < 0 ? 0 : count
     }
 
     public var debugDescription: String {
-        return "CoSemaphore(_count: \(count()))"
+        return description
+    }
+
+    public var description: String {
+        return "CoSemaphore(initValue: \(_value), count: \(count()), waiting: \(_resumers.count))"
     }
 }
