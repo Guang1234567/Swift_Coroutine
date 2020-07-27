@@ -29,10 +29,10 @@ public class CoFuture<R>: CustomDebugStringConvertible, CustomStringConvertible 
     }
 
     public init(_ name: String, _ dispatchQueue: DispatchQueue = DispatchQueue.global(), _ task: @escaping CoroutineScopeFn<R>) {
-        self._name = name
-        self._dispatchQueue = dispatchQueue
-        self._task = task
-        self._lock = DispatchSemaphore(value: 1)
+        _name = name
+        _dispatchQueue = dispatchQueue
+        _task = task
+        _lock = DispatchSemaphore(value: 1)
     }
 
     public func async() -> CoFuture<R> {
@@ -41,14 +41,14 @@ public class CoFuture<R>: CustomDebugStringConvertible, CustomStringConvertible 
     }
 
     func launchCo() -> Void {
-        self._lock.wait()
+        _lock.wait()
         defer {
-            self._lock.signal()
+            _lock.signal()
         }
 
-        // `self._coJob == nil` means `co` not started
-        if self._coJob == nil && self._result == nil {
-            self._coJob = CoLauncher.launch(name: "co_\(self._name)", dispatchQueue: self._dispatchQueue) { [unowned self](co: Coroutine) throws -> R in
+        // `_coJob == nil` means `co` not started
+        if _coJob == nil && _result == nil {
+            _coJob = CoLauncher.launch(name: "co_\(_name)", dispatchQueue: _dispatchQueue) { [unowned self](co: Coroutine) throws -> R in
                 if self._result == nil {
                     self._result = Result {
                         try self._task(co)
@@ -61,33 +61,33 @@ public class CoFuture<R>: CustomDebugStringConvertible, CustomStringConvertible 
 
     @discardableResult
     public func await(_ co: Coroutine) throws -> R {
-        self._lock.wait()
-        if let result = self._result {
+        _lock.wait()
+        if let result = _result {
             defer {
-                self._lock.signal()
+                _lock.signal()
             }
             return try result.get()
         } else {
-            self._lock.signal()
+            _lock.signal()
         }
 
         try co.yieldUntil { [unowned self] (resumer: @escaping CoroutineResumer) -> Void in
             self.async()
-            self._coJob?.onStateChanged.subscribe(onCompleted: resumer)
+            _coJob?.onStateChanged.subscribe(onCompleted: resumer)
         }
 
-        return try self._result!.get()
+        return try _result!.get()
     }
 
     public func cancel() -> Bool {
-        self._lock.wait()
+        _lock.wait()
         defer {
-            self._lock.signal()
+            _lock.signal()
         }
 
-        // `self._coJob == nil` means `co` not started
-        if self._coJob == nil && self._result == nil {
-            self._result = .failure(CoFutureError.canceled)
+        // `_coJob == nil` means `co` not started
+        if _coJob == nil && _result == nil {
+            _result = .failure(CoFutureError.canceled)
             return true
         } else {
             return false
@@ -95,12 +95,12 @@ public class CoFuture<R>: CustomDebugStringConvertible, CustomStringConvertible 
     }
 
     public var isCanceled: Bool {
-        self._lock.wait()
+        _lock.wait()
         defer {
-            self._lock.signal()
+            _lock.signal()
         }
 
-        if case .failure(let error as CoFutureError)? = self._result {
+        if case .failure(let error as CoFutureError)? = _result {
             return error == .canceled
         }
         return false

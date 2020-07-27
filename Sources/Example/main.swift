@@ -1,6 +1,7 @@
 import Foundation
 import Swift_Coroutine
 import Swift_Boost_Context
+import RxSwift
 
 enum TestError: Error {
     case SomeError(reason: String)
@@ -267,15 +268,54 @@ func example_06() throws {
     Thread.sleep(forTimeInterval: 1)
 }
 
+/// Coroutine instead of `BackPress` in RxSwift RxJava
+func example_07() throws {
+    // Example-07
+    // ===================
+    print("Example-07 =============================")
+    let bag = DisposeBag()
+    let ob = Observable<Int>.coroutineCreate(dispatchQueue: DispatchQueue(label: "producerQueue"/*, qos: .background*/, attributes: .concurrent)) { (eventProducer) in
+        for time in (1...20).reversed() {
+            try eventProducer.send(time)
+            if time == 11 {
+                return // exit in a half-way, no more event be produced
+            }
+            /*if time == 10 {
+                throw TestError.SomeError(reason: "Occupy some exception in a half-way, no more event be produced") // occupy exception in a half-way, no more event be produced
+            }*/
+            print("produce: \(time)")
+        }
+    }
+
+    let _ = ob.subscribe(
+                      onNext: { (text) in
+                          Thread.sleep(forTimeInterval: 1)
+                          print("consume: \(text)")
+                      },
+                      onError: { (error) in
+                          print("onError: \(error)")
+                      },
+                      onCompleted: {
+                          print("onCompleted")
+                      },
+                      onDisposed: {
+                          print("onDisposed")
+                      }
+              )
+              .disposed(by: bag)
+
+    Thread.sleep(forTimeInterval: 15)
+}
+
 func main() throws -> Void {
 
-    //try example_01()
-    //try example_02()
-    //try example_03()
-    //try example_04()
+    try example_01()
+    try example_02()
+    try example_03()
+    try example_04()
     try example_05()
-    //try example_06()
-
+    try example_06()
+    try example_07()
 }
 
 do {

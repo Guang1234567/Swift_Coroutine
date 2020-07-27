@@ -316,6 +316,85 @@ channel = CoChannel(
 Process finished with exit code 0
 ```
 
+### Coroutine VS Rx's Backpressure
+
+Backpressure is one of the most interesting and complex aspects of reactive streams. Coroutines can suspend and they provide a natural answer to handling backpressure.
+
+> https://github.com/Kotlin/kotlinx.coroutines/blob/1.3.1/reactive/coroutines-guide-reactive.md#backpressure
+
+```swift
+/// Coroutine instead of `BackPress` in RxSwift RxJava
+func example_07() throws {
+    // Example-07
+    // ===================
+    print("Example-07 =============================")
+    let bag = DisposeBag()
+    let ob = Observable<Int>.coroutineCreate(dispatchQueue: DispatchQueue(label: "producerQueue"/*, qos: .background*/, attributes: .concurrent)) { (eventProducer) in
+        for time in (1...20).reversed() {
+            try eventProducer.send(time)
+            if time == 11 {
+                return // exit in a half-way, no more event be produced
+            }
+            /*if time == 10 {
+                throw TestError.SomeError(reason: "Occupy some exception in a half-way, no more event be produced") // occupy exception in a half-way, no more event be produced
+            }*/
+            print("produce: \(time)")
+        }
+    }
+
+    let _ = ob.subscribe(
+                      onNext: { (text) in
+                          Thread.sleep(forTimeInterval: 1)
+                          print("consume: \(text)")
+                      },
+                      onError: { (error) in
+                          print("onError: \(error)")
+                      },
+                      onCompleted: {
+                          print("onCompleted")
+                      },
+                      onDisposed: {
+                          print("onDisposed")
+                      }
+              )
+              .disposed(by: bag)
+
+    Thread.sleep(forTimeInterval: 15)
+}
+```
+
+
+**output:**
+
+```ruby
+Example-07 =============================
+produce: 20
+produce: 19
+consume: 20
+produce: 18
+consume: 19
+produce: 17
+consume: 18
+produce: 16
+consume: 17
+produce: 15
+consume: 16
+produce: 14
+consume: 15
+produce: 13
+consume: 14
+produce: 12
+consume: 13
+consume: 12
+consume: 11
+onCompleted
+onDisposed
+
+Process finished with exit code 0
+```
+
+We see here how the producer coroutine puts the first element in the buffer and is suspended while trying to send another one. Only after the consumer processes the first item, the producer sends the second one and resumes, etc.
+
 ### Future (Non-Blocking)
 
  A workflow step might need data from two or more previous steps combined.

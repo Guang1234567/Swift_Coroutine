@@ -12,10 +12,10 @@ open class CoScope {
         cancel()
     }
 
-    init(_ co: Coroutine) {
-        self._coJobs = []
-        self._isCanceled = AtomicBool()
-        self._isCanceled.initialize(false)
+    init() {
+        _coJobs = []
+        _isCanceled = AtomicBool()
+        _isCanceled.initialize(false)
     }
 
     @discardableResult
@@ -36,6 +36,8 @@ extension CoScope {
             dispatchQueue: DispatchQueue,
             _ task: @escaping CoroutineScopeFn<T>
     ) -> CoJob {
-        return CoLauncher.launch(name: name, dispatchQueue: dispatchQueue, task)
+        let coJob = CoLauncher.launch(name: name, dispatchQueue: dispatchQueue, task)
+        _coJobs.append(coJob)
+        return coJob
     }
 }
