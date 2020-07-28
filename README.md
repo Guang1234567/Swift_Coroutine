@@ -329,16 +329,24 @@ func example_07() throws {
     // ===================
     print("Example-07 =============================")
     let bag = DisposeBag()
-    let ob = Observable<Int>.coroutineCreate(dispatchQueue: DispatchQueue(label: "producerQueue"/*, qos: .background*/, attributes: .concurrent)) { (eventProducer) in
+    let rxProducerQueue_01 = DispatchQueue(label: "rx_producerQueue_01", qos: .background, attributes: .concurrent)
+    let rxProducerQueue_02 = DispatchQueue.global(qos: .background)
+    let ob = Observable<Int>.coroutineCreate(dispatchQueue: rxProducerQueue_01) { (co, eventProducer) in
         for time in (1...20).reversed() {
+            if time % 2 == 0 {
+                try co.continueOn(rxProducerQueue_01)
+            } else {
+                try co.continueOn(rxProducerQueue_02)
+            }
             try eventProducer.send(time)
+            print("produce: \(time) -- \(Thread.current)")
+
             if time == 11 {
                 return // exit in a half-way, no more event be produced
             }
             /*if time == 10 {
                 throw TestError.SomeError(reason: "Occupy some exception in a half-way, no more event be produced") // occupy exception in a half-way, no more event be produced
             }*/
-            print("produce: \(time)")
         }
     }
 
@@ -368,23 +376,24 @@ func example_07() throws {
 
 ```ruby
 Example-07 =============================
-produce: 20
-produce: 19
+produce: 20 -- <NSThread: 0x7ffc4c904120>{number = 4, name = (null)}
+produce: 19 -- <NSThread: 0x7ffc4c904120>{number = 4, name = (null)}
 consume: 20
-produce: 18
+produce: 18 -- <NSThread: 0x7ffc4c904120>{number = 4, name = (null)}
 consume: 19
-produce: 17
+produce: 17 -- <NSThread: 0x7ffc4c904120>{number = 4, name = (null)}
 consume: 18
-produce: 16
+produce: 16 -- <NSThread: 0x7ffc4c904120>{number = 4, name = (null)}
 consume: 17
-produce: 15
+produce: 15 -- <NSThread: 0x7ffc4c904120>{number = 4, name = (null)}
 consume: 16
-produce: 14
+produce: 14 -- <NSThread: 0x7ffc4c904120>{number = 4, name = (null)}
 consume: 15
-produce: 13
+produce: 13 -- <NSThread: 0x7ffc4c904120>{number = 4, name = (null)}
 consume: 14
-produce: 12
+produce: 12 -- <NSThread: 0x7ffc4c904120>{number = 4, name = (null)}
 consume: 13
+produce: 11 -- <NSThread: 0x7ffc4c8041a0>{number = 2, name = (null)}
 consume: 12
 consume: 11
 onCompleted

@@ -1,6 +1,8 @@
 import Foundation
 import RxSwift
 
+// https://github.com/Kotlin/kotlinx.coroutines/blob/1.3.1/reactive/coroutines-guide-reactive.md#backpressure
+
 public struct RxCoEventProducer<E> {
     private let _co: Coroutine
     private let _coChannel: CoChannel<Event<E>>
@@ -20,7 +22,7 @@ extension ObservableType {
     public static func coroutineCreate(
             capacity: Int = 1,
             dispatchQueue: DispatchQueue,
-            produceScope: @escaping (RxCoEventProducer<Element>) throws -> Void
+            produceScope: @escaping (Coroutine, RxCoEventProducer<Element>) throws -> Void
     ) -> Observable<Element> {
 
         return Observable<Element>.create { (observer) -> Disposable in
@@ -44,7 +46,7 @@ extension ObservableType {
 
             let coProducer: CoJob = CoLauncher.launch(name: "", dispatchQueue: dispatchQueue) { (co: Coroutine) throws -> Void in
                 do {
-                    try produceScope(RxCoEventProducer(co, channel))
+                    try produceScope(co, RxCoEventProducer(co, channel))
                     try channel.send(co, .completed)
                 } catch {
                     try channel.send(co, .error(error))

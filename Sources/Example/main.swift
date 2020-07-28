@@ -274,16 +274,24 @@ func example_07() throws {
     // ===================
     print("Example-07 =============================")
     let bag = DisposeBag()
-    let ob = Observable<Int>.coroutineCreate(dispatchQueue: DispatchQueue(label: "producerQueue"/*, qos: .background*/, attributes: .concurrent)) { (eventProducer) in
+    let rxProducerQueue_01 = DispatchQueue(label: "rx_producerQueue_01", qos: .background, attributes: .concurrent)
+    let rxProducerQueue_02 = DispatchQueue.global()
+    let ob = Observable<Int>.coroutineCreate(dispatchQueue: rxProducerQueue_01) { (co, eventProducer) in
         for time in (1...20).reversed() {
+            if time % 2 == 0 {
+                try co.continueOn(rxProducerQueue_01)
+            } else {
+                try co.continueOn(rxProducerQueue_02)
+            }
             try eventProducer.send(time)
+            print("produce: \(time) -- \(Thread.current)")
+
             if time == 11 {
                 return // exit in a half-way, no more event be produced
             }
             /*if time == 10 {
                 throw TestError.SomeError(reason: "Occupy some exception in a half-way, no more event be produced") // occupy exception in a half-way, no more event be produced
             }*/
-            print("produce: \(time)")
         }
     }
 
