@@ -107,9 +107,9 @@ func example_03() throws {
 
     let coDelay = CoLauncher.launch(dispatchQueue: queue) { (co: Coroutine) throws -> String in
         print("coDelay - start \(Thread.current)")
-        let start = CFAbsoluteTimeGetCurrent()
+        let start = Date.timeIntervalSinceReferenceDate
         try co.delay(.seconds(2))
-        let end = CFAbsoluteTimeGetCurrent()
+        let end = Date.timeIntervalSinceReferenceDate
         print("coDelay - end \(Thread.current)  in \((end - start) * 1000) ms")
         return "coDelay 's result"
     }

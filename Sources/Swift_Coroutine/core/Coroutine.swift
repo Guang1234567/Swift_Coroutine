@@ -2,7 +2,6 @@ import Foundation
 import Swift_Boost_Context
 import SwiftAtomics
 import RxSwift
-import RxCocoa
 import RxBlocking
 
 public enum CoroutineState: Int {
@@ -225,7 +224,7 @@ class CoroutineImpl<T>: Coroutine, CustomDebugStringConvertible, CustomStringCon
     }
 
     func continueOn(_ dispatchQueue: DispatchQueue) throws {
-        guard dispatchQueue != _dispatchQueue else {
+        guard dispatchQueue !== _dispatchQueue else {
             return
         }
         try _yield(CoroutineTransfer.CONTINUE_ON(dispatchQueue))
