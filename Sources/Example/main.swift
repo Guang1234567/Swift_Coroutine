@@ -121,7 +121,7 @@ func example_04() throws {
     // Example-04
     // ===================
     print("Example-04 =============================")
-    let start = CFAbsoluteTimeGetCurrent()
+    let start = Date.timeIntervalSinceReferenceDate
     let queue = DispatchQueue(label: "example_04", attributes: .concurrent)
     let coJob = CoLauncher.launch(name: "coTestNestFuture", dispatchQueue: queue) { (co: Coroutine) throws -> Void in
         var sum: Int = 0
@@ -137,7 +137,7 @@ func example_04() throws {
     try coJob.join()
 
     //print("Thread.sleep(forTimeInterval: 5)")
-    let end = CFAbsoluteTimeGetCurrent()
+    let end = Date.timeIntervalSinceReferenceDate
     print("coFuture - end \(Thread.current)  in \((end - start) * 1000) ms")
     //Thread.sleep(forTimeInterval: 1)
 }
