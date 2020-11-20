@@ -1,0 +1,34 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "RxSwift",
+        "repositoryURL": "https://hub.fastgit.org/Guang1234567/RxSwift.git",
+        "state": {
+          "branch": "5.1.1_patch_support_android",
+          "revision": "3e6c9e7eb0d5f6e654248fa9182e643ee40ec5fb",
+          "version": null
+        }
+      },
+      {
+        "package": "Swift_Atomics",
+        "repositoryURL": "https://hub.fastgit.org/Guang1234567/Swift_Atomics.git",
+        "state": {
+          "branch": "master",
+          "revision": "32a8c89a132c5d6d4330002dc65af2953306d3b6",
+          "version": null
+        }
+      },
+      {
+        "package": "Swift_Boost_Context",
+        "repositoryURL": "https://hub.fastgit.org/Guang1234567/Swift_Boost_Context.git",
+        "state": {
+          "branch": "master",
+          "revision": "b5e7497a928c38e99cd4890ff0faf1c39866f0c8",
+          "version": null
+        }
+      }
+    ]
+  },
+  "version": 1
+}

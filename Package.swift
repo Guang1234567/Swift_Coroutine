@@ -1,4 +1,4 @@
-// swift-tools-version:5.2
+// swift-tools-version:5.3
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -26,7 +26,7 @@ let package = Package(
                     dependencies: [
                         "Swift_Boost_Context",
                         "Swift_Atomics",
-                        .product(name: "RxSwift", package: "RxSwift"),
+                        "RxSwift",
                         .product(name: "RxRelay", package: "RxSwift"),
                         .product(name: "RxBlocking", package: "RxSwift")
                     ]),
