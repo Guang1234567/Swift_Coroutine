@@ -35,6 +35,7 @@ public class CoFuture<R>: CustomDebugStringConvertible, CustomStringConvertible 
         _lock = DispatchSemaphore(value: 1)
     }
 
+    @discardableResult
     public func async() -> CoFuture<R> {
         self.launchCo()
         return self
@@ -73,7 +74,7 @@ public class CoFuture<R>: CustomDebugStringConvertible, CustomStringConvertible 
 
         try co.yieldUntil { [unowned self] (resumer: @escaping CoroutineResumer) -> Void in
             self.async()
-            _coJob?.onStateChanged.subscribe(onCompleted: resumer)
+            _ = _coJob?.onStateChanged.subscribe(onCompleted: resumer)
         }
 
         return try _result!.get()
