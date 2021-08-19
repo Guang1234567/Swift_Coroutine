@@ -5,8 +5,8 @@
         "package": "RxSwift",
         "repositoryURL": "https://hub.fastgit.org/Guang1234567/RxSwift.git",
         "state": {
-          "branch": "5.1.1_patch_support_android",
-          "revision": "3e6c9e7eb0d5f6e654248fa9182e643ee40ec5fb",
+          "branch": "android_support",
+          "revision": "d6afbac63db70c8655ee23ab6480987242368c57",
           "version": null
         }
       },
@@ -15,7 +15,7 @@
         "repositoryURL": "https://hub.fastgit.org/Guang1234567/Swift_Atomics.git",
         "state": {
           "branch": "master",
-          "revision": "32a8c89a132c5d6d4330002dc65af2953306d3b6",
+          "revision": "170360291102ce932d47837a3fbf4bbcc127d963",
           "version": null
         }
       },
@@ -24,7 +24,7 @@
         "repositoryURL": "https://hub.fastgit.org/Guang1234567/Swift_Boost_Context.git",
         "state": {
           "branch": "master",
-          "revision": "c6a9fd4c27897125a4490b938e7af3c318fd864f",
+          "revision": "ae95d566a512ac027c72b3cee13d10469438d2aa",
           "version": null
         }
       }
