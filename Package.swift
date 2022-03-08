@@ -17,7 +17,8 @@ let package = Package(
             // .package(url: /* package url */, from: "1.0.0"),
             .package(url: "https://www.github.com/Guang1234567/RxSwift.git", .branch("android_support")),
             .package(url: "https://www.github.com/Guang1234567/Swift_Boost_Context.git", .branch("master")),
-            .package(url: "https://www.github.com/Guang1234567/Swift_Atomics.git", .branch("master"))
+            .package(url: "https://www.github.com/Guang1234567/Swift_Atomics.git", .branch("master")),
+            .package(url: "https://github.com/Guang1234567/SwiftThreadLocal.git", .branch("master"))
         ],
         targets: [
             // Targets are the basic building blocks of a package. A target can define a module or a test suite.
@@ -29,7 +30,8 @@ let package = Package(
                         "Swift_Atomics",
                         "RxSwift",
                         .product(name: "RxRelay", package: "RxSwift"),
-                        .product(name: "RxBlocking", package: "RxSwift")
+                        .product(name: "RxBlocking", package: "RxSwift"),
+                        "SwiftThreadLocal"
                     ]),
             .target(
                     name: "Example",

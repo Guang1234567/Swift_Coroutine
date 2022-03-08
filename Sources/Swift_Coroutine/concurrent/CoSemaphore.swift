@@ -31,6 +31,15 @@ public class CoSemaphore: CustomStringConvertible, CustomDebugStringConvertible 
         }
     }
 
+    public func wait() throws -> Void {
+        let co: Coroutine? = Thread.getThreadLocalStorageValueForKey(KEY_SWIFT_COROUTINE_THREAD_LOCAL)
+        if let co = co {
+            return try self.wait(co)
+        } else {
+            throw CoroutineError.getCoroutineFromThreadLocalFail(reason: "get coroutine from thread-local fail when call `func wait() throws -> Void` !")
+        }
+    }
+
     public func waitUntil(_ co: Coroutine, _ cond: @escaping (Int) throws -> Bool) throws -> Void {
         _lock.wait()
         if try cond(self._count.load()) {
@@ -46,6 +55,15 @@ public class CoSemaphore: CustomStringConvertible, CustomDebugStringConvertible 
                 _resumers.append(resumer)
                 _count.decrement()
             }
+        }
+    }
+
+    public func waitUntil(_ cond: @escaping (Int) throws -> Bool) throws -> Void {
+        let co: Coroutine? = Thread.getThreadLocalStorageValueForKey(KEY_SWIFT_COROUTINE_THREAD_LOCAL)
+        if let co = co {
+            return try self.waitUntil(cond)
+        } else {
+            throw CoroutineError.getCoroutineFromThreadLocalFail(reason: "get coroutine from thread-local fail when call `func waitUntil(_ cond: @escaping (Int) throws -> Bool) throws -> Void` !")
         }
     }
 

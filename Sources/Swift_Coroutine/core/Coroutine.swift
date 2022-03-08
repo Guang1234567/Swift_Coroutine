@@ -4,6 +4,7 @@ import SwiftAtomics
 import RxSwift
 import RxBlocking
 
+
 public enum CoroutineState: Int {
     case INITED = 0
     case STARTED = 1
@@ -12,7 +13,7 @@ public enum CoroutineState: Int {
     case EXITED = 4
 }
 
-public typealias CoroutineScopeFn<T> = (Coroutine) throws -> T
+public typealias CoroutineScopeFn<T> = () throws -> T
 
 public typealias CoroutineResumer = () -> Void
 
@@ -50,13 +51,23 @@ public protocol Coroutine {
 
     func yield() throws -> Void
 
+    static func yield() throws -> Void
+
     func yieldUntil(cond: () throws -> Bool) throws -> Void
+
+    static func yieldUntil(cond: () throws -> Bool) throws -> Void
 
     func yieldUntil(_ beforeYield: (@escaping CoroutineResumer) -> Void) throws -> Void
 
+    static func yieldUntil(_ beforeYield: (@escaping CoroutineResumer) -> Void) throws -> Void
+
     func delay(_ timeInterval: DispatchTimeInterval) throws -> Void
 
+    static func delay(_ timeInterval: DispatchTimeInterval) throws -> Void
+
     func continueOn(_ dispatchQueue: DispatchQueue) throws -> Void
+
+    static func continueOn(_ dispatchQueue: DispatchQueue) throws -> Void
 
 }
 
@@ -68,7 +79,13 @@ enum CoroutineTransfer<T> {
     case EXIT(Result<T, Error>)
 }
 
-class CoroutineImpl<T>: Coroutine, CustomDebugStringConvertible, CustomStringConvertible {
+#if canImport(ObjectiveC)
+let KEY_SWIFT_COROUTINE_THREAD_LOCAL: NSString = "__key_swift_coroutine_thread_local"
+#else
+let KEY_SWIFT_COROUTINE_THREAD_LOCAL: String = "__key_swift_coroutine_thread_local"
+#endif
+
+public class CoroutineImpl<T>: Coroutine, CustomDebugStringConvertible, CustomStringConvertible {
 
     let _name: String
 
@@ -86,11 +103,11 @@ class CoroutineImpl<T>: Coroutine, CustomDebugStringConvertible, CustomStringCon
 
     let _onStateChanged: AsyncSubject<CoroutineState>
 
-    var currentState: CoroutineState {
+    public var currentState: CoroutineState {
         CoroutineState(rawValue: _currentState.load()) ?? .EXITED
     }
 
-    var onStateChanged: Observable<CoroutineState> {
+    public var onStateChanged: Observable<CoroutineState> {
         return _onStateChanged.asObserver()
     }
 
@@ -135,7 +152,7 @@ class CoroutineImpl<T>: Coroutine, CustomDebugStringConvertible, CustomStringCon
         self.triggerStateChangedEvent(.STARTED)
 
         let result: Result<T, Error> = Result { [unowned self] in
-            try self._task(self)
+            try self._task()
         }
 
         return CoroutineTransfer.EXIT(result)
@@ -181,37 +198,84 @@ class CoroutineImpl<T>: Coroutine, CustomDebugStringConvertible, CustomStringCon
     }
 
     func makeResumer(_ yield: @escaping FN_YIELD<Void, CoroutineTransfer<T>>) -> CoroutineResumer {
-        return { /*[unowned self] in*/
+        return { [self] in
+            Thread.setThreadLocalStorageValue(self, forKey: KEY_SWIFT_COROUTINE_THREAD_LOCAL)
             let coTransfer: CoroutineTransfer<T> = yield(())
+            Thread.removeThreadLocalStorageValueForKey(forKey: KEY_SWIFT_COROUTINE_THREAD_LOCAL)
             return self.resume(yield, ctf: coTransfer)
         }
     }
 
-    func yield() throws -> Void {
+    public func yield() throws -> Void {
         return try _yield(CoroutineTransfer.YIELD)
     }
 
-    func yieldUntil(cond: () throws -> Bool) throws -> Void {
+    public static func yield() throws -> Void {
+        let co: Coroutine? = Thread.getThreadLocalStorageValueForKey(KEY_SWIFT_COROUTINE_THREAD_LOCAL)
+        if let co = co {
+            return try co.yield()
+        } else {
+            throw CoroutineError.getCoroutineFromThreadLocalFail(reason: "get coroutine from thread-local fail when call `func yield() throws -> Void` !")
+        }
+    }
+
+    public func yieldUntil(cond: () throws -> Bool) throws -> Void {
         while !(try cond()) {
             try self.yield()
         }
     }
 
-    func yieldUntil(_ beforeYield: (@escaping CoroutineResumer) -> Void) throws -> Void {
+    public static func yieldUntil(cond: () throws -> Bool) throws -> Void {
+        let co: Coroutine? = Thread.getThreadLocalStorageValueForKey(KEY_SWIFT_COROUTINE_THREAD_LOCAL)
+        if let co = co {
+            return try co.yieldUntil(cond: cond)
+        } else {
+            throw CoroutineError.getCoroutineFromThreadLocalFail(reason: "get coroutine from thread-local fail when call `func yieldUntil(cond: () throws -> Bool) throws -> Void` !")
+        }
+    }
+
+    public func yieldUntil(_ beforeYield: (@escaping CoroutineResumer) -> Void) throws -> Void {
         let resumeNotifier: AsyncSubject<Never> = AsyncSubject()
         beforeYield({ resumeNotifier.on(.completed) })
         try _yield(CoroutineTransfer.YIELD_UNTIL(resumeNotifier.asCompletable()))
     }
 
-    func delay(_ timeInterval: DispatchTimeInterval) throws -> Void {
+    public static func yieldUntil(_ beforeYield: (@escaping CoroutineResumer) -> Void) throws -> Void {
+        let co: Coroutine? = Thread.getThreadLocalStorageValueForKey(KEY_SWIFT_COROUTINE_THREAD_LOCAL)
+        if let co = co {
+            return try co.yieldUntil(beforeYield)
+        } else {
+            throw CoroutineError.getCoroutineFromThreadLocalFail(reason: "get coroutine from thread-local fail when call `func yieldUntil(_ beforeYield: (@escaping CoroutineResumer) -> Void) throws -> Void` !")
+        }
+    }
+
+    public func delay(_ timeInterval: DispatchTimeInterval) throws -> Void {
         try _yield(CoroutineTransfer.DELAY(timeInterval))
     }
 
-    func continueOn(_ dispatchQueue: DispatchQueue) throws {
+    public static func delay(_ timeInterval: DispatchTimeInterval) throws -> Void {
+        let co: Coroutine? = Thread.getThreadLocalStorageValueForKey(KEY_SWIFT_COROUTINE_THREAD_LOCAL)
+        if let co = co {
+            return try co.delay(timeInterval)
+        } else {
+            throw CoroutineError.getCoroutineFromThreadLocalFail(reason: "get coroutine from thread-local fail when call `func delay(_ timeInterval: DispatchTimeInterval) throws -> Void` !")
+        }
+    }
+
+    public func continueOn(_ dispatchQueue: DispatchQueue) throws -> Void {
         guard dispatchQueue !== _dispatchQueue else {
             return
         }
         try _yield(CoroutineTransfer.CONTINUE_ON(dispatchQueue))
+    }
+
+    public static func continueOn(_ dispatchQueue: DispatchQueue) throws -> Void {
+        let co: Coroutine? = Thread.getThreadLocalStorageValueForKey(KEY_SWIFT_COROUTINE_THREAD_LOCAL)
+        if let co = co {
+            return try co.continueOn(dispatchQueue)
+        } else {
+            throw CoroutineError.getCoroutineFromThreadLocalFail(reason: "get coroutine from thread-local fail when call `func continueOn(_ dispatchQueue: DispatchQueue) throws -> Void` !")
+        }
     }
 
     func _yield(_ ctf: CoroutineTransfer<T>) throws -> Void {
@@ -236,10 +300,10 @@ class CoroutineImpl<T>: Coroutine, CustomDebugStringConvertible, CustomStringCon
         return _yieldCtx != nil
     }
 
-    var debugDescription: String {
+    public var debugDescription: String {
         return "CoroutineImpl(_name: \(_name))"
     }
-    var description: String {
+    public var description: String {
         return "CoroutineImpl(_name: \(_name))"
     }
 

@@ -15,31 +15,34 @@ func example_01() throws {
     //let queue = DispatchQueue(label: "TestCoroutine")
     let queue = DispatchQueue.global()
 
-    let coJob1 = CoLauncher.launch(name: "co1", dispatchQueue: queue) { (co: Coroutine) throws -> String in
+    let coJob1 = CoLauncher.launch(name: "co1", dispatchQueue: queue) { () throws -> String in
         defer {
             print("co 01 - end \(Thread.current)")
         }
         print("co 01 - start \(Thread.current)")
-        try co.yield()
+        //try co.yield()
+        try CoroutineImpl<Any>.yield()
         return "co1 's result"
     }
 
-    let coJob2 = CoLauncher.launch(dispatchQueue: queue) { (co: Coroutine) throws -> String in
+    let coJob2 = CoLauncher.launch(name: "co2", dispatchQueue: queue) { () throws -> String in
         defer {
             print("co 02 - end \(Thread.current)")
         }
         print("co 02 - start \(Thread.current)")
-        try co.yield()
+        //try co.yield()
+        try CoroutineImpl<Any>.yield()
         throw TestError.SomeError(reason: "Occupy some error in co2")
         return "co2 's result"
     }
 
-    let coJob3 = CoLauncher.launch(dispatchQueue: queue) { (co: Coroutine) throws -> String in
+    let coJob3 = CoLauncher.launch(name: "co3", dispatchQueue: queue) { () throws -> String in
         defer {
             print("co 03 - end \(Thread.current)")
         }
         print("co 03 - start \(Thread.current)")
-        try co.yield()
+        //try co.yield()
+        try CoroutineImpl<Any>.yield()
         return "co3 's result"
     }
 
@@ -63,10 +66,10 @@ func example_02() throws {
     //let semMutex = DispatchSemaphore(value: 1)
     var buffer: [Int] = []
 
-    let coConsumer = CoLauncher.launch(dispatchQueue: consumerQueue) { (co: Coroutine) throws -> Void in
+    let coConsumer = CoLauncher.launch(dispatchQueue: consumerQueue) { () throws -> Void in
         for time in (1...32) {
-            try semEmpty.wait(co)
-            try semMutex.wait(co)
+            try semEmpty.wait()
+            try semMutex.wait()
             if buffer.isEmpty {
                 fatalError()
             }
@@ -77,10 +80,10 @@ func example_02() throws {
         }
     }
 
-    let coProducer = CoLauncher.launch(dispatchQueue: producerQueue) { (co: Coroutine) throws -> Void in
+    let coProducer = CoLauncher.launch(dispatchQueue: producerQueue) { () throws -> Void in
         for time in (1...32).reversed() {
-            try semFull.wait(co)
-            try semMutex.wait(co)
+            try semFull.wait()
+            try semMutex.wait()
             buffer.append(time)
             print("produced : \(time)   \(Thread.current)")
             semMutex.signal()
@@ -105,10 +108,11 @@ func example_03() throws {
     //let queue = DispatchQueue(label: "TestCoroutine")
     let queue = DispatchQueue.global()
 
-    let coDelay = CoLauncher.launch(dispatchQueue: queue) { (co: Coroutine) throws -> String in
+    let coDelay = CoLauncher.launch(dispatchQueue: queue) { () throws -> String in
         print("coDelay - start \(Thread.current)")
         let start = Date.timeIntervalSinceReferenceDate
-        try co.delay(.seconds(2))
+        //try co.delay(.seconds(2))
+        try CoroutineImpl<Any>.delay(.seconds(2))
         let end = Date.timeIntervalSinceReferenceDate
         print("coDelay - end \(Thread.current)  in \((end - start) * 1000) ms")
         return "coDelay 's result"
@@ -123,13 +127,15 @@ func example_04() throws {
     print("Example-04 =============================")
     let start = Date.timeIntervalSinceReferenceDate
     let queue = DispatchQueue(label: "example_04", attributes: .concurrent)
-    let coJob = CoLauncher.launch(name: "coTestNestFuture", dispatchQueue: queue) { (co: Coroutine) throws -> Void in
+    let coJob = CoLauncher.launch(name: "coTestNestFuture", dispatchQueue: queue) { () throws -> Void in
         var sum: Int = 0
         for i in (1...100) {
             //print("--------------------   makeCoFuture_01_\(i) --- await(\(co)) -- before")
-            try co.continueOn(.global())
-            sum += try makeCoFuture_01("makeCoFuture_01_\(i)", queue, i).await(co)
-            try co.continueOn(.main)
+            //try co.continueOn(.global())
+            try CoroutineImpl<Any>.continueOn(.global())
+            sum += try makeCoFuture_01("makeCoFuture_01_\(i)", queue, i).await()
+            //try co.continueOn(.main)
+            try CoroutineImpl<Any>.continueOn(.main)
             //print("--------------------   makeCoFuture_01_\(i) --- await(\(co)) -- end")
         }
         print("sum = \(sum)")
@@ -143,13 +149,15 @@ func example_04() throws {
 }
 
 func makeCoFuture_01(_ name: String, _ dispatchQueue: DispatchQueue, _ i: Int) -> CoFuture<Int> {
-    return CoFuture(name, dispatchQueue) { (co: Coroutine) in
+    return CoFuture(name, dispatchQueue) { () in
         var sum: Int = 0
         for j in (1...100) {
             //print("--------------------   makeCoFuture_02_\(j) --- await(\(co)) -- before")
-            try co.continueOn(.main)
-            sum += try makeCoFuture_02("makeCoFuture_02_\(j)", dispatchQueue, j).await(co)
-            try co.continueOn(.global())
+            //try co.continueOn(.main)
+            try CoroutineImpl<Any>.continueOn(.main)
+            sum += try makeCoFuture_02("makeCoFuture_02_\(j)", dispatchQueue, j).await()
+            //try co.continueOn(.global())
+            try CoroutineImpl<Any>.continueOn(.global())
             //print("--------------------   makeCoFuture_02_\(j) --- await(\(co)) -- end")
         }
         return sum
@@ -157,8 +165,9 @@ func makeCoFuture_01(_ name: String, _ dispatchQueue: DispatchQueue, _ i: Int) -
 }
 
 func makeCoFuture_02(_ name: String, _ dispatchQueue: DispatchQueue, _ i: Int) -> CoFuture<Int> {
-    return CoFuture(name, dispatchQueue) { (co: Coroutine) in
+    return CoFuture(name, dispatchQueue) { () in
         //try co.delay(.milliseconds(5))
+        //try CoroutineImpl<Any>.delay(.milliseconds(5))
         return i
     }
 }
@@ -175,50 +184,60 @@ func example_05() throws {
     let closeQueue = DispatchQueue(label: "closeQueue", /*qos: .background,*/ attributes: .concurrent)
     let channel = CoChannel<Int>(name: "CoChannel_Example-05", capacity: 1)
 
-    let coClose = CoLauncher.launch(name: "coClose", dispatchQueue: closeQueue) { (co: Coroutine) throws -> Void in
-        try co.delay(.milliseconds(100))
+    let coClose = CoLauncher.launch(name: "coClose", dispatchQueue: closeQueue) { () throws -> Void in
+        //try co.delay(.milliseconds(100))
+        try CoroutineImpl<Any>.delay(.milliseconds(100))
         print("coClose before  --  delay")
         //try co.yield()
+        //try CoroutineImpl<Any>.yield()
         channel.close()
         print("coClose after  --  delay")
     }
 
-    let coConsumer = CoLauncher.launch(name: "coConsumer", dispatchQueue: consumerQueue) { (co: Coroutine) throws -> Void in
+    let coConsumer = CoLauncher.launch(name: "coConsumer", dispatchQueue: consumerQueue) { () throws -> Void in
         var time: Int = 1
-        for item in try channel.receive(co) {
-            try co.delay(.milliseconds(15))
+        for item in try channel.receive() {
+            //try co.delay(.milliseconds(15))
+            try CoroutineImpl<Any>.delay(.milliseconds(15))
             //try co.delay(.milliseconds(5))
+            //try CoroutineImpl<Any>.delay(.milliseconds(5))
             print("consumed : \(item)  --  \(time)  --  \(Thread.current)")
             time += 1
         }
         print("coConsumer  --  end")
     }
 
-    let coProducer01 = CoLauncher.launch(name: "coProducer01", dispatchQueue: producerQueue_01) { (co: Coroutine) throws -> Void in
+    let coProducer01 = CoLauncher.launch(name: "coProducer01", dispatchQueue: producerQueue_01) { () throws -> Void in
         for time in (1...20).reversed() {
-            try co.delay(.milliseconds(10))
+            //try co.delay(.milliseconds(10))
+            try CoroutineImpl<Any>.delay(.milliseconds(10))
             //print("coProducer01  --  before produce : \(time)")
-            try channel.send(co, time)
+            //try channel.send(co, time)
+            try channel.send(time)
             print("coProducer01  --  after produce : \(time)")
         }
         print("coProducer01  --  end")
     }
 
-    let coProducer02 = CoLauncher.launch(name: "coProducer02", dispatchQueue: producerQueue_02) { (co: Coroutine) throws -> Void in
+    let coProducer02 = CoLauncher.launch(name: "coProducer02", dispatchQueue: producerQueue_02) { () throws -> Void in
         for time in (21...40).reversed() {
             //print("coProducer02  --  before produce : \(time)")
-            try co.delay(.milliseconds(10))
-            try channel.send(co, time)
+            //try co.delay(.milliseconds(10))
+            try CoroutineImpl<Any>.delay(.milliseconds(10))
+            //try channel.send(co, time)
+            try channel.send(time)
             print("coProducer02  --  after produce : \(time)")
         }
         print("coProducer02  --  end")
     }
 
-    let coProducer03 = CoLauncher.launch(name: "coProducer03", dispatchQueue: producerQueue_03) { (co: Coroutine) throws -> Void in
+    let coProducer03 = CoLauncher.launch(name: "coProducer03", dispatchQueue: producerQueue_03) { () throws -> Void in
         for time in (41...60).reversed() {
             //print("coProducer02  --  before produce : \(time)")
-            try co.delay(.milliseconds(10))
-            try channel.send(co, time)
+            //try co.delay(.milliseconds(10))
+            try CoroutineImpl<Any>.delay(.milliseconds(10))
+            //try channel.send(co, time)
+            try channel.send(time)
             print("coProducer03  --  after produce : \(time)")
         }
         print("coProducer03  --  end")
@@ -247,18 +266,22 @@ func example_06() throws {
         print("other job \(Thread.current)")
     }
 
-    let coJob1 = CoLauncher.launch(name: "co1", dispatchQueue: queue) { (co: Coroutine) throws -> String in
+    let coJob1 = CoLauncher.launch(name: "co1", dispatchQueue: queue) { () throws -> String in
         defer {
             print("co 01 - end \(Thread.current)")
         }
         print("co 01 - start \(Thread.current)")
-        try co.continueOn(queue_001)
+        //try co.continueOn(queue_001)
+        try CoroutineImpl<Any>.continueOn(queue_001)
         print("co 01 - continueOn - queue_001 -  \(Thread.current)")
-        try co.continueOn(DispatchQueue.main)
+        //try co.continueOn(DispatchQueue.main)
+        try CoroutineImpl<Any>.continueOn(DispatchQueue.main)
         print("co 01 - continueOn - queue_main -  \(Thread.current)")
-        try co.continueOn(queue_002)
+        //try co.continueOn(queue_002)
+        try CoroutineImpl<Any>.continueOn(queue_002)
         print("co 01 - continueOn - queue_002 -  \(Thread.current)")
-        try co.continueOn(queue)
+        //try co.continueOn(queue)
+        try CoroutineImpl<Any>.continueOn(queue)
 
         return "co1 's result"
     }
@@ -276,12 +299,14 @@ func example_07() throws {
     let bag = DisposeBag()
     let rxProducerQueue_01 = DispatchQueue(label: "rx_producerQueue_01", qos: .background, attributes: .concurrent)
     let rxProducerQueue_02 = DispatchQueue.global()
-    let ob = Observable<Int>.coroutineCreate(dispatchQueue: rxProducerQueue_01) { (co, eventProducer) in
+    let ob = Observable<Int>.coroutineCreate(dispatchQueue: rxProducerQueue_01) { (eventProducer) in
         for time in (1...20).reversed() {
             if time % 2 == 0 {
-                try co.continueOn(rxProducerQueue_01)
+                //try co.continueOn(rxProducerQueue_01)
+                try CoroutineImpl<Any>.continueOn(rxProducerQueue_01)
             } else {
-                try co.continueOn(rxProducerQueue_02)
+                //try co.continueOn(rxProducerQueue_02)
+                try CoroutineImpl<Any>.continueOn(rxProducerQueue_02)
             }
             try eventProducer.send(time)
             print("produce: \(time) -- \(Thread.current)")
@@ -296,21 +321,21 @@ func example_07() throws {
     }
 
     let _ = ob.subscribe(
-                      onNext: { (text) in
-                          Thread.sleep(forTimeInterval: 1)
-                          print("consume: \(text)")
-                      },
-                      onError: { (error) in
-                          print("onError: \(error)")
-                      },
-                      onCompleted: {
-                          print("onCompleted")
-                      },
-                      onDisposed: {
-                          print("onDisposed")
-                      }
-              )
-              .disposed(by: bag)
+                    onNext: { (text) in
+                        Thread.sleep(forTimeInterval: 1)
+                        print("consume: \(text)")
+                    },
+                    onError: { (error) in
+                        print("onError: \(error)")
+                    },
+                    onCompleted: {
+                        print("onCompleted")
+                    },
+                    onDisposed: {
+                        print("onDisposed")
+                    }
+            )
+            .disposed(by: bag)
 
     Thread.sleep(forTimeInterval: 15)
 }

@@ -3,7 +3,7 @@
     "pins": [
       {
         "package": "RxSwift",
-        "repositoryURL": "https://hub.fastgit.org/Guang1234567/RxSwift.git",
+        "repositoryURL": "https://www.github.com/Guang1234567/RxSwift.git",
         "state": {
           "branch": "android_support",
           "revision": "d6afbac63db70c8655ee23ab6480987242368c57",
@@ -12,7 +12,7 @@
       },
       {
         "package": "Swift_Atomics",
-        "repositoryURL": "https://hub.fastgit.org/Guang1234567/Swift_Atomics.git",
+        "repositoryURL": "https://www.github.com/Guang1234567/Swift_Atomics.git",
         "state": {
           "branch": "master",
           "revision": "170360291102ce932d47837a3fbf4bbcc127d963",
@@ -21,10 +21,19 @@
       },
       {
         "package": "Swift_Boost_Context",
-        "repositoryURL": "https://hub.fastgit.org/Guang1234567/Swift_Boost_Context.git",
+        "repositoryURL": "https://www.github.com/Guang1234567/Swift_Boost_Context.git",
         "state": {
           "branch": "master",
           "revision": "ae95d566a512ac027c72b3cee13d10469438d2aa",
+          "version": null
+        }
+      },
+      {
+        "package": "SwiftThreadLocal",
+        "repositoryURL": "https://github.com/Guang1234567/SwiftThreadLocal.git",
+        "state": {
+          "branch": "master",
+          "revision": "c38b304d9d5bb87990394b6bdb0c747b75c5538f",
           "version": null
         }
       }

@@ -6,11 +6,13 @@ enum CoChannelError: Error, CustomStringConvertible, CustomDebugStringConvertibl
 
     public var description: String {
         switch self {
-            case .closed:
-                return "CoChannelError.close"
+        case .closed:
+            return "CoChannelError.close"
         }
     }
-    public var debugDescription: String { description }
+    public var debugDescription: String {
+        description
+    }
 }
 
 public class CoChannel<E>: CustomDebugStringConvertible, CustomStringConvertible {
@@ -64,10 +66,19 @@ public class CoChannel<E>: CustomDebugStringConvertible, CustomStringConvertible
         _buffer.append(e)
     }
 
+    public func send(_ e: E) throws -> Void {
+        let co: Coroutine? = Thread.getThreadLocalStorageValueForKey(KEY_SWIFT_COROUTINE_THREAD_LOCAL)
+        if let co = co {
+            return try self.send(co, e)
+        } else {
+            throw CoroutineError.getCoroutineFromThreadLocalFail(reason: "get coroutine from thread-local fail when call `func send(_ e: E) throws -> Void` !")
+        }
+    }
+
     private func _receive(_ co: Coroutine) throws -> E {
         try _semMutex.wait(co)
         if self.isClosed()
-           && _semEmpty.count() <= 0
+                   && _semEmpty.count() <= 0
                 /*&& _buffer.isEmpty*/ {
             //print("\(co) receive  close")
             defer {
@@ -93,6 +104,15 @@ public class CoChannel<E>: CustomDebugStringConvertible, CustomStringConvertible
     public func receive(_ co: Coroutine) throws -> AnyIterator<E> {
         return AnyIterator { [unowned self] in
             try? self._receive(co)
+        }
+    }
+
+    public func receive() throws -> AnyIterator<E> {
+        let co: Coroutine? = Thread.getThreadLocalStorageValueForKey(KEY_SWIFT_COROUTINE_THREAD_LOCAL)
+        if let co = co {
+            return try self.receive(co)
+        } else {
+            throw CoroutineError.getCoroutineFromThreadLocalFail(reason: "get coroutine from thread-local fail when call `func receive() throws -> AnyIterator<E>` !")
         }
     }
 

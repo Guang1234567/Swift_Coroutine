@@ -49,10 +49,10 @@ public class CoFuture<R>: CustomDebugStringConvertible, CustomStringConvertible 
 
         // `_coJob == nil` means `co` not started
         if _coJob == nil && _result == nil {
-            _coJob = CoLauncher.launch(name: "co_\(_name)", dispatchQueue: _dispatchQueue) { [unowned self](co: Coroutine) throws -> R in
+            _coJob = CoLauncher.launch(name: "co_\(_name)", dispatchQueue: _dispatchQueue) { [unowned self]() throws -> R in
                 if self._result == nil {
                     self._result = Result {
-                        try self._task(co)
+                        try self._task()
                     }
                 }
                 return try self._result!.get()
@@ -78,6 +78,16 @@ public class CoFuture<R>: CustomDebugStringConvertible, CustomStringConvertible 
         }
 
         return try _result!.get()
+    }
+
+    @discardableResult
+    public func await() throws -> R {
+        let co: Coroutine? = Thread.getThreadLocalStorageValueForKey(KEY_SWIFT_COROUTINE_THREAD_LOCAL)
+        if let co = co {
+            return try self.await(co)
+        } else {
+            throw CoroutineError.getCoroutineFromThreadLocalFail(reason: "get coroutine from thread-local fail when call `func await() throws -> R` !")
+        }
     }
 
     public func cancel() -> Bool {
