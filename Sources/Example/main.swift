@@ -20,7 +20,6 @@ func example_01() throws {
             print("co 01 - end \(Thread.current)")
         }
         print("co 01 - start \(Thread.current)")
-        //try co.yield()
         try CoroutineImpl<Any>.yield()
         return "co1 's result"
     }
@@ -30,7 +29,6 @@ func example_01() throws {
             print("co 02 - end \(Thread.current)")
         }
         print("co 02 - start \(Thread.current)")
-        //try co.yield()
         try CoroutineImpl<Any>.yield()
         throw TestError.SomeError(reason: "Occupy some error in co2")
         return "co2 's result"
@@ -41,7 +39,6 @@ func example_01() throws {
             print("co 03 - end \(Thread.current)")
         }
         print("co 03 - start \(Thread.current)")
-        //try co.yield()
         try CoroutineImpl<Any>.yield()
         return "co3 's result"
     }
@@ -111,7 +108,6 @@ func example_03() throws {
     let coDelay = CoLauncher.launch(dispatchQueue: queue) { () throws -> String in
         print("coDelay - start \(Thread.current)")
         let start = Date.timeIntervalSinceReferenceDate
-        //try co.delay(.seconds(2))
         try CoroutineImpl<Any>.delay(.seconds(2))
         let end = Date.timeIntervalSinceReferenceDate
         print("coDelay - end \(Thread.current)  in \((end - start) * 1000) ms")
@@ -131,10 +127,8 @@ func example_04() throws {
         var sum: Int = 0
         for i in (1...100) {
             //print("--------------------   makeCoFuture_01_\(i) --- await(\(co)) -- before")
-            //try co.continueOn(.global())
             try CoroutineImpl<Any>.continueOn(.global())
             sum += try makeCoFuture_01("makeCoFuture_01_\(i)", queue, i).await()
-            //try co.continueOn(.main)
             try CoroutineImpl<Any>.continueOn(.main)
             //print("--------------------   makeCoFuture_01_\(i) --- await(\(co)) -- end")
         }
@@ -153,10 +147,8 @@ func makeCoFuture_01(_ name: String, _ dispatchQueue: DispatchQueue, _ i: Int) -
         var sum: Int = 0
         for j in (1...100) {
             //print("--------------------   makeCoFuture_02_\(j) --- await(\(co)) -- before")
-            //try co.continueOn(.main)
             try CoroutineImpl<Any>.continueOn(.main)
             sum += try makeCoFuture_02("makeCoFuture_02_\(j)", dispatchQueue, j).await()
-            //try co.continueOn(.global())
             try CoroutineImpl<Any>.continueOn(.global())
             //print("--------------------   makeCoFuture_02_\(j) --- await(\(co)) -- end")
         }
@@ -166,7 +158,6 @@ func makeCoFuture_01(_ name: String, _ dispatchQueue: DispatchQueue, _ i: Int) -
 
 func makeCoFuture_02(_ name: String, _ dispatchQueue: DispatchQueue, _ i: Int) -> CoFuture<Int> {
     return CoFuture(name, dispatchQueue) { () in
-        //try co.delay(.milliseconds(5))
         //try CoroutineImpl<Any>.delay(.milliseconds(5))
         return i
     }
@@ -185,10 +176,8 @@ func example_05() throws {
     let channel = CoChannel<Int>(name: "CoChannel_Example-05", capacity: 1)
 
     let coClose = CoLauncher.launch(name: "coClose", dispatchQueue: closeQueue) { () throws -> Void in
-        //try co.delay(.milliseconds(100))
         try CoroutineImpl<Any>.delay(.milliseconds(100))
         print("coClose before  --  delay")
-        //try co.yield()
         //try CoroutineImpl<Any>.yield()
         channel.close()
         print("coClose after  --  delay")
@@ -197,9 +186,7 @@ func example_05() throws {
     let coConsumer = CoLauncher.launch(name: "coConsumer", dispatchQueue: consumerQueue) { () throws -> Void in
         var time: Int = 1
         for item in try channel.receive() {
-            //try co.delay(.milliseconds(15))
             try CoroutineImpl<Any>.delay(.milliseconds(15))
-            //try co.delay(.milliseconds(5))
             //try CoroutineImpl<Any>.delay(.milliseconds(5))
             print("consumed : \(item)  --  \(time)  --  \(Thread.current)")
             time += 1
@@ -209,10 +196,8 @@ func example_05() throws {
 
     let coProducer01 = CoLauncher.launch(name: "coProducer01", dispatchQueue: producerQueue_01) { () throws -> Void in
         for time in (1...20).reversed() {
-            //try co.delay(.milliseconds(10))
             try CoroutineImpl<Any>.delay(.milliseconds(10))
             //print("coProducer01  --  before produce : \(time)")
-            //try channel.send(co, time)
             try channel.send(time)
             print("coProducer01  --  after produce : \(time)")
         }
@@ -222,9 +207,7 @@ func example_05() throws {
     let coProducer02 = CoLauncher.launch(name: "coProducer02", dispatchQueue: producerQueue_02) { () throws -> Void in
         for time in (21...40).reversed() {
             //print("coProducer02  --  before produce : \(time)")
-            //try co.delay(.milliseconds(10))
             try CoroutineImpl<Any>.delay(.milliseconds(10))
-            //try channel.send(co, time)
             try channel.send(time)
             print("coProducer02  --  after produce : \(time)")
         }
@@ -234,9 +217,7 @@ func example_05() throws {
     let coProducer03 = CoLauncher.launch(name: "coProducer03", dispatchQueue: producerQueue_03) { () throws -> Void in
         for time in (41...60).reversed() {
             //print("coProducer02  --  before produce : \(time)")
-            //try co.delay(.milliseconds(10))
             try CoroutineImpl<Any>.delay(.milliseconds(10))
-            //try channel.send(co, time)
             try channel.send(time)
             print("coProducer03  --  after produce : \(time)")
         }
@@ -271,16 +252,12 @@ func example_06() throws {
             print("co 01 - end \(Thread.current)")
         }
         print("co 01 - start \(Thread.current)")
-        //try co.continueOn(queue_001)
         try CoroutineImpl<Any>.continueOn(queue_001)
         print("co 01 - continueOn - queue_001 -  \(Thread.current)")
-        //try co.continueOn(DispatchQueue.main)
         try CoroutineImpl<Any>.continueOn(DispatchQueue.main)
         print("co 01 - continueOn - queue_main -  \(Thread.current)")
-        //try co.continueOn(queue_002)
         try CoroutineImpl<Any>.continueOn(queue_002)
         print("co 01 - continueOn - queue_002 -  \(Thread.current)")
-        //try co.continueOn(queue)
         try CoroutineImpl<Any>.continueOn(queue)
 
         return "co1 's result"
@@ -302,10 +279,8 @@ func example_07() throws {
     let ob = Observable<Int>.coroutineCreate(dispatchQueue: rxProducerQueue_01) { (eventProducer) in
         for time in (1...20).reversed() {
             if time % 2 == 0 {
-                //try co.continueOn(rxProducerQueue_01)
                 try CoroutineImpl<Any>.continueOn(rxProducerQueue_01)
             } else {
-                //try co.continueOn(rxProducerQueue_02)
                 try CoroutineImpl<Any>.continueOn(rxProducerQueue_02)
             }
             try eventProducer.send(time)
