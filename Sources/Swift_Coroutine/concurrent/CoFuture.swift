@@ -82,7 +82,7 @@ public class CoFuture<R>: CustomDebugStringConvertible, CustomStringConvertible 
 
     @discardableResult
     public func await() throws -> R {
-        let co: Coroutine? = Thread.getThreadLocalStorageValueForKey(KEY_SWIFT_COROUTINE_THREAD_LOCAL)
+        let co: Coroutine? = Thread.getThreadLocalValueForKey(KEY_SWIFT_COROUTINE_THREAD_LOCAL)
         if let co = co {
             return try self.await(co)
         } else {

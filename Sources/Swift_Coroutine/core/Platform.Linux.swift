@@ -11,7 +11,7 @@
 import Foundation
 
 extension Thread {
-    static func setThreadLocalStorageValue<T: AnyObject>(_ value: T?, forKey key: String) {
+    static func setThreadLocalValue<T>(_ value: T?, forKey key: String) {
         if let newValue = value {
             Thread.current.threadDictionary[key] = newValue
         } else {
@@ -19,14 +19,14 @@ extension Thread {
         }
     }
 
-    static func getThreadLocalStorageValueForKey<T: AnyObject>(_ key: String) -> T? {
+    static func getThreadLocalValueForKey<T>(_ key: String) -> T? {
         let currentThread = Thread.current
         let threadDictionary = currentThread.threadDictionary
 
         return threadDictionary[key] as? T
     }
 
-    static func removeThreadLocalStorageValueForKey(forKey key: String) {
+    static func removeThreadLocalValueForKey(forKey key: String) {
         let currentThread = Thread.current
         let threadDictionary = currentThread.threadDictionary
 

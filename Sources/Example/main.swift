@@ -316,7 +316,6 @@ func example_07() throws {
 }
 
 func main() throws -> Void {
-
     try example_01()
     try example_02()
     try example_03()

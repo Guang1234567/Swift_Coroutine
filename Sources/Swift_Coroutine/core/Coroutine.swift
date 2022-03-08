@@ -199,9 +199,9 @@ public class CoroutineImpl<T>: Coroutine, CustomDebugStringConvertible, CustomSt
 
     func makeResumer(_ yield: @escaping FN_YIELD<Void, CoroutineTransfer<T>>) -> CoroutineResumer {
         return { [self] in
-            Thread.setThreadLocalStorageValue(self, forKey: KEY_SWIFT_COROUTINE_THREAD_LOCAL)
+            Thread.setThreadLocalValue(self, forKey: KEY_SWIFT_COROUTINE_THREAD_LOCAL)
             let coTransfer: CoroutineTransfer<T> = yield(())
-            Thread.removeThreadLocalStorageValueForKey(forKey: KEY_SWIFT_COROUTINE_THREAD_LOCAL)
+            Thread.removeThreadLocalValueForKey(forKey: KEY_SWIFT_COROUTINE_THREAD_LOCAL)
             return self.resume(yield, ctf: coTransfer)
         }
     }
@@ -211,7 +211,7 @@ public class CoroutineImpl<T>: Coroutine, CustomDebugStringConvertible, CustomSt
     }
 
     public static func yield() throws -> Void {
-        let co: Coroutine? = Thread.getThreadLocalStorageValueForKey(KEY_SWIFT_COROUTINE_THREAD_LOCAL)
+        let co: Coroutine? = Thread.getThreadLocalValueForKey(KEY_SWIFT_COROUTINE_THREAD_LOCAL)
         if let co = co {
             return try co.yield()
         } else {
@@ -226,7 +226,7 @@ public class CoroutineImpl<T>: Coroutine, CustomDebugStringConvertible, CustomSt
     }
 
     public static func yieldUntil(cond: () throws -> Bool) throws -> Void {
-        let co: Coroutine? = Thread.getThreadLocalStorageValueForKey(KEY_SWIFT_COROUTINE_THREAD_LOCAL)
+        let co: Coroutine? = Thread.getThreadLocalValueForKey(KEY_SWIFT_COROUTINE_THREAD_LOCAL)
         if let co = co {
             return try co.yieldUntil(cond: cond)
         } else {
@@ -241,7 +241,7 @@ public class CoroutineImpl<T>: Coroutine, CustomDebugStringConvertible, CustomSt
     }
 
     public static func yieldUntil(_ beforeYield: (@escaping CoroutineResumer) -> Void) throws -> Void {
-        let co: Coroutine? = Thread.getThreadLocalStorageValueForKey(KEY_SWIFT_COROUTINE_THREAD_LOCAL)
+        let co: Coroutine? = Thread.getThreadLocalValueForKey(KEY_SWIFT_COROUTINE_THREAD_LOCAL)
         if let co = co {
             return try co.yieldUntil(beforeYield)
         } else {
@@ -254,7 +254,7 @@ public class CoroutineImpl<T>: Coroutine, CustomDebugStringConvertible, CustomSt
     }
 
     public static func delay(_ timeInterval: DispatchTimeInterval) throws -> Void {
-        let co: Coroutine? = Thread.getThreadLocalStorageValueForKey(KEY_SWIFT_COROUTINE_THREAD_LOCAL)
+        let co: Coroutine? = Thread.getThreadLocalValueForKey(KEY_SWIFT_COROUTINE_THREAD_LOCAL)
         if let co = co {
             return try co.delay(timeInterval)
         } else {
@@ -270,7 +270,7 @@ public class CoroutineImpl<T>: Coroutine, CustomDebugStringConvertible, CustomSt
     }
 
     public static func continueOn(_ dispatchQueue: DispatchQueue) throws -> Void {
-        let co: Coroutine? = Thread.getThreadLocalStorageValueForKey(KEY_SWIFT_COROUTINE_THREAD_LOCAL)
+        let co: Coroutine? = Thread.getThreadLocalValueForKey(KEY_SWIFT_COROUTINE_THREAD_LOCAL)
         if let co = co {
             return try co.continueOn(dispatchQueue)
         } else {
@@ -316,7 +316,7 @@ public class CoLauncher {
             dispatchQueue: DispatchQueue,
             _ task: @escaping CoroutineScopeFn<T>
     ) -> CoJob {
-        let co: CoroutineImpl = CoroutineImpl<T>(name, dispatchQueue, task)
+        let co: CoroutineImpl<T> = CoroutineImpl<T>(name, dispatchQueue, task)
         co.start()
         return CoJob(co)
     }

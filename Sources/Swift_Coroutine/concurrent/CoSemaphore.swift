@@ -32,7 +32,7 @@ public class CoSemaphore: CustomStringConvertible, CustomDebugStringConvertible 
     }
 
     public func wait() throws -> Void {
-        let co: Coroutine? = Thread.getThreadLocalStorageValueForKey(KEY_SWIFT_COROUTINE_THREAD_LOCAL)
+        let co: Coroutine? = Thread.getThreadLocalValueForKey(KEY_SWIFT_COROUTINE_THREAD_LOCAL)
         if let co = co {
             return try self.wait(co)
         } else {
@@ -59,7 +59,7 @@ public class CoSemaphore: CustomStringConvertible, CustomDebugStringConvertible 
     }
 
     public func waitUntil(_ cond: @escaping (Int) throws -> Bool) throws -> Void {
-        let co: Coroutine? = Thread.getThreadLocalStorageValueForKey(KEY_SWIFT_COROUTINE_THREAD_LOCAL)
+        let co: Coroutine? = Thread.getThreadLocalValueForKey(KEY_SWIFT_COROUTINE_THREAD_LOCAL)
         if let co = co {
             return try self.waitUntil(cond)
         } else {

@@ -12,7 +12,7 @@ import Darwin
 import Foundation
 
 extension Thread {
-    static func setThreadLocalStorageValue<T: AnyObject>(_ value: T?, forKey key: NSCopying) {
+    static func setThreadLocalValue<T: AnyObject>(_ value: T?, forKey key: NSCopying) {
         let currentThread = Thread.current
         let threadDictionary = currentThread.threadDictionary
 
@@ -23,14 +23,14 @@ extension Thread {
         }
     }
 
-    static func getThreadLocalStorageValueForKey<T>(_ key: NSCopying) -> T? {
+    static func getThreadLocalValueForKey<T>(_ key: NSCopying) -> T? {
         let currentThread = Thread.current
         let threadDictionary = currentThread.threadDictionary
 
         return threadDictionary[key] as? T
     }
 
-    static func removeThreadLocalStorageValueForKey(forKey key: NSCopying) {
+    static func removeThreadLocalValueForKey(forKey key: NSCopying) {
         let currentThread = Thread.current
         let threadDictionary = currentThread.threadDictionary
 

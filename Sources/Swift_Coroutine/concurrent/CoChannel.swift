@@ -67,7 +67,7 @@ public class CoChannel<E>: CustomDebugStringConvertible, CustomStringConvertible
     }
 
     public func send(_ e: E) throws -> Void {
-        let co: Coroutine? = Thread.getThreadLocalStorageValueForKey(KEY_SWIFT_COROUTINE_THREAD_LOCAL)
+        let co: Coroutine? = Thread.getThreadLocalValueForKey(KEY_SWIFT_COROUTINE_THREAD_LOCAL)
         if let co = co {
             return try self.send(co, e)
         } else {
@@ -108,7 +108,7 @@ public class CoChannel<E>: CustomDebugStringConvertible, CustomStringConvertible
     }
 
     public func receive() throws -> AnyIterator<E> {
-        let co: Coroutine? = Thread.getThreadLocalStorageValueForKey(KEY_SWIFT_COROUTINE_THREAD_LOCAL)
+        let co: Coroutine? = Thread.getThreadLocalValueForKey(KEY_SWIFT_COROUTINE_THREAD_LOCAL)
         if let co = co {
             return try self.receive(co)
         } else {
